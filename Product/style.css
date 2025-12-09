@@ -1,0 +1,637 @@
+/* style.css */
+
+:root {
+    /* ... (نفس المتغيرات السابقة) ... */
+    --pw-primary-color: #2563eb;
+    --pw-primary-hover: #1d4ed8;
+    --pw-bg: #ffffff;
+    --pw-text: #111827;
+    --pw-muted: #6b7280;
+    --pw-border: #e5e7eb;
+    --pw-radius: 12px;
+    --pw-gap: 16px;
+    --pw-font-base: 1rem;
+    --pw-font-lg: 1.25rem;
+    --pw-font-sm: 0.875rem;
+}
+
+/* Reset & base */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f3f4f6;
+    
+    /* تعديل 1: إزالة الـ padding والـ margin من الجسم لكي يأخذ الهيدر كامل الشاشة */
+    margin: 0;
+    padding: 0;
+    
+    color: var(--pw-text);
+    min-height: 100vh;
+}
+
+/* Widget container */
+.product-widget {
+    background: var(--pw-bg);
+    border: 1px solid var(--pw-border);
+    border-radius: var(--pw-radius);
+    max-width: 900px;
+    
+    /* تعديل 2: إضافة مسافة من الأعلى (بدلاً من padding الجسم) ومن الجوانب */
+    margin: 40px auto; 
+    width: 95%; /* لضمان عدم التصاقه بالحواف في الشاشات الصغيرة */
+    
+    overflow: hidden;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+}
+
+/* ... (باقي الكود كما هو دون تغيير) ... */
+
+/* ... (نهاية الملف) ... */
+
+.pw__inner {
+    display: flex;
+    flex-direction: column;
+}
+
+@media(min-width:600px) {
+    .pw__inner {
+        flex-direction: row;
+    }
+}
+
+/* Image column */
+.pw__image-col {
+    flex: 0 0 auto;
+    min-width: 0;
+}
+
+@media(min-width:600px) {
+    .pw__image-col {
+        flex-basis: 45%;
+        max-width: 45%
+    }
+}
+
+.pw__image-trigger {
+    position: relative;
+    padding-top: 100%;
+    cursor: zoom-in;
+    overflow: hidden;
+    display: block;
+}
+
+.pw__image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform .28s ease;
+}
+
+.pw__image-trigger:hover .pw__image,
+.pw__image-trigger:focus .pw__image {
+    transform: scale(1.05)
+}
+
+.pw__image-trigger:focus {
+    outline: 3px solid var(--pw-primary-color);
+    outline-offset: -3px
+}
+
+/* Details column */
+.pw__details {
+    flex: 1;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--pw-gap)
+}
+
+.pw__title {
+    font-size: var(--pw-font-lg);
+    font-weight: 700;
+    margin: 0;
+    line-height: 1.2
+}
+
+.pw__price {
+    font-size: 1.2rem;
+    color: var(--pw-primary-color);
+    font-weight: 600;
+    margin: 0
+}
+
+.pw__description {
+    color: var(--pw-muted);
+    font-size: var(--pw-font-base);
+    line-height: 1.6;
+    margin: 0
+}
+
+/* Controls */
+.pw__controls {
+    display: flex;
+    flex-direction: column;
+    gap: var(--pw-gap);
+    margin-top: auto
+}
+
+.pw__control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px
+}
+
+.pw__label {
+    font-size: var(--pw-font-sm);
+    font-weight: 600;
+    color: var(--pw-text)
+}
+
+/* Selects and inputs */
+.pw__select,
+.pw__qty-input {
+    padding: 10px 12px;
+    border: 1px solid var(--pw-border);
+    border-radius: 8px;
+    background: var(--pw-bg);
+    font-size: var(--pw-font-base);
+    color: var(--pw-text);
+}
+
+.pw__select:focus,
+.pw__qty-input:focus {
+    outline: none;
+    border-color: var(--pw-primary-color);
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.06)
+}
+
+/* Quantity */
+.pw__qty {
+    display: flex;
+    align-items: center;
+    gap: 8px
+}
+
+.pw__qty-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    border: 1px solid var(--pw-border);
+    background: var(--pw-bg);
+    cursor: pointer;
+    font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center
+}
+
+.pw__qty-btn:disabled {
+    opacity: .5;
+    cursor: not-allowed
+}
+
+.pw__qty-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.06)
+}
+
+.pw__qty-input {
+    width: 64px;
+    text-align: center;
+    appearance: textfield
+}
+
+/* Add button */
+.pw__add-btn {
+    padding: 12px 18px;
+    background: var(--pw-primary-color);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+}
+
+.pw__add-btn:disabled {
+    opacity: .75;
+    cursor: not-allowed
+}
+
+.pw__add-btn:hover:not(:disabled) {
+    background: var(--pw-primary-hover)
+}
+
+.pw__add-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.12)
+}
+
+/* Spinner (inline) */
+.pw__spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: pw-spin .8s linear infinite
+}
+
+@keyframes pw-spin {
+    to {
+        transform: rotate(360deg)
+    }
+}
+
+/* Errors & hidden helper */
+.pw__error {
+    color: #dc2626;
+    font-size: var(--pw-font-sm);
+    margin: 0;
+    min-height: 1.1em
+}
+
+.pw--hidden {
+    display: none !important
+}
+
+/* Lightbox styles */
+.pw__lightbox {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 10000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .2s ease, visibility .2s ease
+}
+
+.pw__lightbox.pw--active {
+    opacity: 1;
+    visibility: visible
+}
+
+.pw__lightbox-inner {
+    position: relative;
+    max-width: 90vw;
+    max-height: 90vh
+}
+
+.pw__lightbox-img {
+    max-width: 100%;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 8px
+}
+
+.pw__lightbox-close {
+    position: absolute;
+    top: -44px;
+    right: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.06);
+    border: none;
+    color: #fff;
+    font-size: 22px;
+    cursor: pointer
+}
+
+/* Screen-reader only */
+.pw__sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0
+}
+
+/* Demo section */
+.demo {
+    max-width: 900px;
+    margin: 32px auto 0;
+    padding: 20px;
+    background: #111827;
+    color: #e5e7eb;
+    border-radius: 8px
+}
+
+.demo h2 {
+    margin: 0 0 8px 0;
+    color: #fff
+}
+
+.demo__code {
+    background: #0b1220;
+    padding: 12px;
+    border-radius: 6px;
+    overflow: auto;
+    color: #a5f3fc
+}
+.logo{
+    width: 200px;
+    height: 80px;
+    object-fit: contain;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--text-dark);
+  font-weight: 800;
+  font-size: 1.5rem;
+  transition: transform 0.2s;
+}
+.demo__log {
+    margin-top: 16px;
+    background: #0b1220;
+    padding: 12px;
+    border-radius: 6px;
+    min-height: 52px
+}
+
+.demo__hint {
+    color: #9ca3af;
+    margin: 0
+}
+
+.demo .log-entry {
+    color: #34d399
+}
+/* style.css (Append this to your existing content) */
+
+/* --- Layout utility for centered content --- */
+.container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 15px; /* Add padding to sides for all container usage */
+}
+
+/* Ensure the main widget section still looks good */
+.product-widget {
+    /* ... (Your existing styles here) ... */
+}
+
+/* --- General Section Styling --- */
+.section-title {
+    font-size: var(--pw-font-lg);
+    font-weight: 700;
+    margin: 32px 0 20px;
+    color: var(--pw-text);
+    border-bottom: 2px solid var(--pw-border);
+    padding-bottom: 10px;
+}
+
+/* --- Customer Reviews Section --- */
+.reviews-container {
+    padding: 20px 0 40px;
+}
+
+/* Review Form Styling */
+.review-form {
+    background: var(--pw-bg);
+    border: 1px solid var(--pw-border);
+    border-radius: var(--pw-radius);
+    padding: 24px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.review-form h3 {
+    margin-top: 0;
+    margin-bottom: 16px;
+    font-size: 1.1rem;
+    color: var(--pw-text);
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: var(--pw-font-sm);
+    font-weight: 600;
+}
+
+.form-input, .form-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--pw-border);
+    border-radius: 8px;
+    font-size: var(--pw-font-base);
+    color: var(--pw-text);
+    background: var(--pw-bg);
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.form-input:focus, .form-textarea:focus {
+    outline: none;
+    border-color: var(--pw-primary-color);
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.06);
+}
+
+.form-textarea {
+    resize: vertical;
+}
+
+.submit-btn {
+    /* Reusing existing button style for consistency */
+    width: auto; 
+    padding: 10px 20px;
+}
+
+/* Star Rating Input */
+.rating-input {
+    display: flex;
+    flex-direction: row-reverse; /* Reverses order for traditional star input logic */
+    justify-content: flex-end; /* Aligns stars to the right for RTL */
+}
+
+.rating-star {
+    font-size: 24px;
+    cursor: pointer;
+    color: #ccc; /* Default grey color */
+    transition: color 0.2s;
+    margin-right: 5px;
+}
+
+.rating-star:hover,
+.rating-star:hover ~ .rating-star,
+.rating-star.selected,
+.rating-star.selected ~ .rating-star {
+    color: gold;
+}
+
+/* Reviews List Styling (Modern Card Layout) */
+.reviews-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.review-card {
+    background: var(--pw-bg);
+    border: 1px solid var(--pw-border);
+    border-radius: var(--pw-radius);
+    padding: 20px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-direction: column;
+}
+
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed var(--pw-border);
+}
+
+.review-name {
+    font-weight: 700;
+    color: var(--pw-primary-color);
+    font-size: var(--pw-font-base);
+}
+
+.review-rating-display {
+    color: gold;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    line-height: 1;
+}
+
+.review-date {
+    font-size: var(--pw-font-sm);
+    color: var(--pw-muted);
+    text-align: left;
+    margin-top: 8px;
+}
+
+.review-text {
+    flex-grow: 1;
+    color: var(--pw-text);
+    line-height: 1.6;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+
+/* --- Related Products Section (Horizontal Scroll) --- */
+.related-products-container {
+    padding: 20px 0 40px;
+}
+
+.related-products-list {
+    display: flex;
+    overflow-x: auto;
+    gap: 20px;
+    padding: 10px 0; /* Vertical padding for potential scrollbar */
+    scroll-snap-type: x mandatory;
+    /* Styles to hide scrollbar while keeping functionality */
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+
+.related-products-list::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+}
+
+/* Product Card Styling */
+.product-card {
+    flex: 0 0 240px; /* Fixed width for card (Adjust as needed) */
+    scroll-snap-align: start;
+    background: var(--pw-bg);
+    border: 1px solid var(--pw-border);
+    border-radius: var(--pw-radius);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    padding: 10px;
+    text-align: center;
+    transition: transform 0.2s;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.product-card-image {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.product-card-name {
+    font-weight: 600;
+    font-size: var(--pw-font-base);
+    color: var(--pw-text);
+    margin: 5px 0;
+    min-height: 2.4em; /* Ensure uniform height for names */
+    overflow: hidden;
+}
+
+.product-card-price {
+    color: var(--pw-primary-color);
+    font-weight: 700;
+    margin: 5px 0;
+}
+
+.product-card-rating {
+    color: gold;
+    margin-bottom: 10px;
+    font-size: 1rem;
+}
+
+.product-card-btn {
+    display: inline-block;
+    padding: 8px 15px;
+    margin-top: auto;
+    background: var(--pw-primary-color);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.2s;
+    text-decoration: none;
+}
+
+.product-card-btn:hover {
+    background: var(--pw-primary-hover);
+}
+
+/* Media Query for Mobile Responsiveness */
+@media (max-width: 600px) {
+    .reviews-list {
+        grid-template-columns: 1fr; /* Stack reviews vertically on small screens */
+    }
+    .product-card {
+        flex: 0 0 65vw; /* Wider cards on mobile for easy scrolling/swiping */
+    }
+    .product-card-image {
+        height: 150px;
+    }
+}

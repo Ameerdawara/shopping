@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Store Header</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="style_header.css">
+    <script src="/Market/Wedgit/script_header.js"></script>
+</head>
+<body>
+
+<header class="main-header">
+  <div class="container">
+
+    <a href="index.html" >
+      <img class="logo"  src="/Market/images/logo.png" alt="" srcset="">
+    </a>
+
+    <div class="search-box">
+      <input type="text" placeholder="ابحث عن منتجات...">
+      <button class="search-btn" title="بحث"><i class="fas fa-search"></i></button>
+    </div>
+
+    <div class="nav-actions">
+        <nav class="nav-links">
+            <a href="index.html" class="active">الرئيسية</a>
+            <a href="#">المنتجات</a>
+        </nav>
+
+        <div class="profile-menu">
+            <button id="profileBtn" class="icon-btn" aria-label="Profile Menu">
+                <i class="fas fa-user"></i>
+            </button>
+            
+            <ul class="dropdown" id="dropdownMenu">
+                <li class="dropdown-header">مرحباً بك!</li>
+                <li><a href="#"><i class="fas fa-shopping-cart"></i> سلّتي</a></li>
+                <li><a href="#"><i class="fas fa-user-circle"></i> حسابي</a></li>
+                <li><a href="#"><i class="fas fa-cog"></i> الإعدادات</a></li>
+                <li class="divider"></li>
+                <li><a href="#" class="logout"><i class="fas fa-sign-out-alt"></i> تسجيل خروج</a></li>
+            </ul>
+        </div>
+    </div>
+
+  </div>
+</header>
+
+<script src="script_header.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,273 @@
+/* style_header.css */
+
+:root {
+  /* ... (نفس المتغيرات) ... */
+  --primary-yellow: #FFC312; 
+  --secondary-yellow: #EA2027; 
+  --header-bg-solid: linear-gradient(90deg, #FFC312, #f7d01f); 
+  --text-dark: #1e272e; 
+  --text-light: #57606f;
+  --white: #ffffff;
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.08); 
+}
+
+/* Header Structure */
+.main-header {
+  background: var(--header-bg-solid);
+  padding: 0.8rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: var(--shadow);
+  width: 100%; /* ضمان العرض الكامل */
+}
+
+.container {
+  width: 90%;
+  max-width: 1200px;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+/* ... (Logo Styling كما هو) ... */
+
+/* Search Box */
+.search-box {
+  flex: 1;
+  max-width: 400px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-box input {
+  width: 100%;
+  /* تعديل: زيادة الـ padding قليلاً أو تحديد ارتفاع ليتطابق مع الأزرار */
+  height: 40px; /* تحديد ارتفاع ثابت ليطابق الأزرار */
+  padding: 0 15px; /* مسافة للنص */
+  padding-left: 40px; /* مسافة للأيقونة في حالة RTL */
+  
+  border-radius: 25px;
+  border: none;
+  outline: none;
+  font-family: inherit;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.search-btn {
+  position: absolute;
+  left: 5px; /* RTL alignment */
+  top: 50%;
+  transform: translateY(-50%); /* ضمان توسيط الأيقونة عمودياً */
+  background: none;
+  border: none;
+  color: var(--text-light);
+  cursor: pointer;
+  padding: 8px;
+  transition: color 0.3s;
+  display: flex; /* لتحسين محاذاة الأيقونة داخل الزر */
+}
+
+/* ... (باقي الكود كما هو) ... */
+.container {
+  width: 90%;
+  max-width: 1200px;
+  margin-top: 0;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+/* 1. Logo Styling */
+.logo {
+  width: 200px;
+    height: 80px;
+    object-fit: cover;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--text-dark);
+  font-weight: 800;
+  font-size: 1.5rem;
+  transition: transform 0.2s;
+}
+
+.logo:hover {
+  transform: scale(1.4);
+}
+
+
+/* 2. Search Box */
+
+.search-btn:hover {
+  color: var(--text-dark);
+}
+
+/* 3. Navigation & Actions */
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 20px;
+}
+
+.nav-links a {
+  text-decoration: none;
+  color: var(--text-dark);
+  font-weight: 600;
+  font-size: 1rem;
+  position: relative;
+  transition: color 0.3s;
+}
+
+.nav-links a::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 2px;
+  bottom: -4px;
+  right: 0;
+  background-color: var(--white);
+  transition: width 0.3s;
+}
+
+.nav-links a:hover::after {
+  width: 100%;
+}
+
+/* Profile Menu */
+.profile-menu {
+  position: relative;
+}
+
+.icon-btn {
+  background: var(--white);
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--text-dark);
+  font-size: 1.1rem;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-btn:hover {
+  background: #fff8dc;
+  transform: translateY(-2px);
+}
+
+/* Dropdown Animation */
+.dropdown {
+  position: absolute;
+  top: 55px;
+  left: 0; /* Align left in RTL context */
+  background: var(--white);
+  width: 200px;
+  border-radius: 12px;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+  list-style: none;
+  padding: 10px 0;
+  
+  /* Animation States */
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+  z-index: 1001;
+}
+
+.dropdown.active {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+/* Dropdown Triangle */
+.dropdown::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 15px;
+  width: 12px;
+  height: 12px;
+  background: var(--white);
+  transform: rotate(45deg);
+}
+
+.dropdown li a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  text-decoration: none;
+  color: var(--text-dark);
+  font-size: 0.95rem;
+  transition: background 0.2s;
+}
+
+.dropdown li a i {
+  width: 20px;
+  text-align: center;
+  color: #F79F1F;
+}
+
+.dropdown li a:hover {
+  background-color: #fff6b0;
+}
+
+.dropdown-header {
+  padding: 10px 20px;
+  font-weight: bold;
+  font-size: 0.85rem;
+  color: var(--text-light);
+  border-bottom: 1px solid #eee;
+  margin-bottom: 5px;
+}
+
+.divider {
+  height: 1px;
+  background-color: #eee;
+  margin: 5px 0;
+}
+
+.logout {
+  color: #e74c3c !important;
+}
+
+.logout i {
+  color: #e74c3c !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .nav-links {
+    display: none; /* Hide text links on mobile */
+  }
+  
+  .container {
+    gap: 10px;
+  }
+  
+  .search-box {
+    max-width: 100%;
+  }
+  
+  .logo span {
+    display: none; /* Hide logo text on very small screens, keep icon */
+  }
+}
