@@ -30,7 +30,7 @@ class AuthController extends Controller
 
 
 
-    /////////////////////////////login
+    ///////////////////////////login
     public function login(Request $request)
     {
         $request->validate([
@@ -38,13 +38,24 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-        if (Auth::attempt($request->only('email', 'password'))) {
-            $request->session()->regenerate();
-            return redirect('/dashboard');
+        if (!Auth::attempt($request->only('email', 'password'))) {
+            return response()->json([
+                'message' => 'البيانات غير صحيحة'
+            ], 401);
         }
-        return back()->withErrors(['email' => 'البيانات غير صحيحة']);
-    }
 
+        // استرجاع بيانات المستخدم
+        $user = Auth::user();
+
+        // إنشاء توكن API
+        $token = $user->createToken('api_token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'تم تسجيل الدخول بنجاح',
+            'token' => $token,
+            'user' => $user
+        ]);
+    }
 
 
 
