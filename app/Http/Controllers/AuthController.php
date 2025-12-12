@@ -30,21 +30,32 @@ class AuthController extends Controller
 
 
 
-    /////////////////////////////login
-    public function login(Request $request)
-    {
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
+    ///////////////////////////login
+    // public function login(Request $request)
+    // {
+    //     $request->validate([
+    //         'email' => 'required|email',
+    //         'password' => 'required',
+    //     ]);
 
-        if (Auth::attempt($request->only('email', 'password'))) {
-            $request->session()->regenerate();
-            return redirect('/dashboard');
-        }
-        return back()->withErrors(['email' => 'البيانات غير صحيحة']);
-    }
+    //     if (!Auth::attempt($request->only('email', 'password'))) {
+    //         return response()->json([
+    //             'message' => 'البيانات غير صحيحة'
+    //         ], 401);
+    //     }
 
+    //     // استرجاع بيانات المستخدم
+    //     $user = Auth::user();
+
+    //     // إنشاء توكن API
+    //     $token = $user->createToken('api_token')->plainTextToken;
+
+    //     return response()->json([
+    //         'message' => 'تم تسجيل الدخول بنجاح',
+    //         'token' => $token,
+    //         'user' => $user
+    //     ]);
+    // }
 
 
 
