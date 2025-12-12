@@ -17,6 +17,9 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users');
             $table->string('bio');
             $table->timestamps();
+             $table->string('phone')->nullable();
+             $table->float('total_purchases');
+
         });
     }
 

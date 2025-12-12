@@ -16,6 +16,8 @@ return new class extends Migration
             $table->foreignId('cart_id')->constrained('cards');
             $table->foreignId('product_id')->constrained('products');
             $table->timestamps();
+            $table->integer("quantity")->default(1);
+            $table->float("unit_price");
         });
     }
 
