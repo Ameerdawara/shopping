@@ -13,7 +13,12 @@ return new class extends Migration
     {
         Schema::create('offers', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('product_id')->constrained('product');
+            $table->foreignId('product_id')->constrained('products');
+            $table->float('discount_percentage')->nullable();  
+            $table->float('discount_price')->nullable();      
+            $table->date('starts_at')->nullable();   
+            $table->date('ends_at')->nullable();   
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
     }
