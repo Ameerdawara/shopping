@@ -12,5 +12,6 @@ class Cart extends Model
      public function cartItem(){
         return $this->hasMany(CartItem::class);
     }
+    protected $table = 'cards';
     
 }
