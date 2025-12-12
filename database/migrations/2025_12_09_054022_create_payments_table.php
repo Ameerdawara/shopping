@@ -13,6 +13,10 @@ return new class extends Migration
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
+            $table->float('amount');
+            $table->boolean('is_paid')->default(false);
+            $table->timestamp('paid_at')->nullable();
+            $table->string('status')->default('pending');
             $table->timestamps();
         });
     }
