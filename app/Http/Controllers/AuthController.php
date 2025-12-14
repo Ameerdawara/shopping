@@ -17,12 +17,14 @@ class AuthController extends Controller
             'name' => 'required|string',
             'email' => 'required|email|unique:users',
             'password' => 'required|min:6|confirmed',
+            'role' => 'required'
         ]);
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => bcrypt($request->password),
+             'role' => $request->role,
         ]);
 
         Auth::login($user);
@@ -63,11 +65,22 @@ public function login(Request $request)
 }
 
     //////////////////////////////logout
-    public function logout(Request $request)
-    {
-        Auth::logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-        return redirect('/');
+  public function logout(Request $request)
+{
+    $user = $request->user();
+
+    if (!$user) {
+        return response()->json([
+            'message' => 'غير مصرح'
+        ], 401);
     }
+
+    $user->currentAccessToken()->delete();
+
+    return response()->json([
+        'message' => 'تم تسجيل الخروج بنجاح'
+    ]);
+}
+
+
 }
