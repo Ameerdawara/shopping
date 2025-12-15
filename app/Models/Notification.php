@@ -4,15 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Profile extends Model
+class Notification extends Model
 {
-    protected $fillable = [
-        'image',
-        'user_id',
-        'bio',
-        'phone',
-        'total_purchases',
-    ];
+    protected $fillable = ['user_id', 'is_read', 'content'];
+
 
     public function user()
     {
