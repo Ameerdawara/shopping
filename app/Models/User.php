@@ -11,7 +11,7 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use  HasApiTokens , HasFactory , Notifiable;
+    use  HasApiTokens, HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -46,16 +46,24 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
-    public function profile(){
+    public function profile()
+    {
         return $this->hasOne(Profile::class);
     }
-     public function carts(){
+    public function carts()
+    {
         return $this->hasOne(Cart::class);
     }
-     public function orders(){
+    public function orders()
+    {
         return $this->hasMany(Order::class);
     }
-    public function reviews(){
+    public function reviews()
+    {
         return $this->hasMany(Review::class);
+    }
+    public function getIsAdminAttribute()
+    {
+        return $this->role === 'admin';
     }
 }
