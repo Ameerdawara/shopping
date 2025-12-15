@@ -6,11 +6,11 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreNotificationRequest extends FormRequest
 {
-    public function authorize(): bool
+    /*public function authorize():
     {
         // فقط الأدمن يمكنه إنشاء إشعارات
-        return auth()->user() && auth()->user()->is_admin;
-    }
+      //  return auth()->user() && auth()->user()->is_admin;
+    }*/
 
     public function rules(): array
     {
