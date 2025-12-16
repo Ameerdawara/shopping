@@ -49,6 +49,7 @@ class CardController extends Controller
         ]);
     }
 
+    
 
     public function update(UpdateCardRequest $request, Cart $card)
     {
@@ -96,7 +97,7 @@ class CardController extends Controller
         $this->authorize('view', $cart);
 
         $total = $cart->cartItem->sum(fn ($item) =>
-            $item->quantity * $item->price
+            $item->quantity * $item->unit_price
         );
 
         return response()->json([
