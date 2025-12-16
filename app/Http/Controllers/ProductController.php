@@ -9,7 +9,6 @@ use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
 {
-   
     /**
      * عرض جميع المنتجات مع الصور والمقاسات
      */
@@ -21,53 +20,59 @@ class ProductController extends Controller
     /**
      * إنشاء منتج مع صور ومقاسات
      */
-    public function store(Request $request)
-    {
-        $this->authorize('create', Product::class);
+   public function store(Request $request)
+{
+    $this->authorize('create', Product::class);
 
-        $allowedSizes = ['S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+    $allowedSizes = ['S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
 
-        $data = $request->validate([
-            'name'        => 'required|string|max:255',
-            'description' => 'required|string',
-            'price'       => 'required|numeric|min:0',
+    $data = $request->validate([
+        'name'        => 'required|string|max:255',
+        'description' => 'required|string',
+        'price'       => 'required|numeric|min:0',
 
-            'images'      => 'required|array|min:1',
-            'images.*'    => 'image|mimes:jpg,jpeg,png,webp|max:2048',
+        'images'      => 'array|min:1',
+        'images.*'    => 'image|mimes:jpg,jpeg,png,webp|max:2048',
 
-            'sizes'              => 'required|array|min:1',
-            'sizes.*.size'       => ['required', 'string', Rule::in($allowedSizes)],
-            'sizes.*.price'      => 'nullable|numeric|min:0',
-            'sizes.*.stock'      => 'required|integer|min:0',
+        'sizes'              => 'array|min:1',
+        'sizes.*.size'       => ['required', 'string', Rule::in($allowedSizes)],
+        'sizes.*.price'      => 'nullable|numeric|min:0',
+        'sizes.*.stock'      => 'required|integer|min:0',
+    ]);
+
+    $product = Product::create([
+        'name'        => $data['name'],
+        'description' => $data['description'],
+        'price'       => $data['price'],
+        'buyCount'    => 0
+    ]);
+if ($request->hasFile('images')) {
+    foreach ($request->file('images') as $image) {
+        $path = $image->store('products', 'public');
+
+        $product->images()->create([
+            'image' => $path,
         ]);
-
-        // إنشاء المنتج
-        $product = Product::create([
-            'name'        => $data['name'],
-            'description' => $data['description'],
-            'price'       => $data['price'],
-            'buyCount'    => 0
-        ]);
-
-        // رفع الصور
-        foreach ($data['images'] as $image) {
-            $path = $image->store('products', 'public');
-
-            $product->images()->create([
-                'image' => $path
-            ]);
-        }
-
-        // إضافة المقاسات
-        foreach ($data['sizes'] as $size) {
-            $product->sizes()->create($size);
-        }
-
-        return response()->json(
-            $product->load(['images', 'sizes']),
-            201
-        );
     }
+}
+
+  if (isset($data['sizes'])) {
+    foreach ($data['sizes'] as $size) {
+        $product->sizes()->create([
+            'size'  => $size['size'],
+            'price' => $size['price'] ?? null,
+            'stock' => $size['stock'],
+        ]);
+    }
+}
+
+
+    return response()->json(
+        $product->load(['images', 'sizes']),
+        201
+    );
+}
+
 
     /**
      * عرض منتج واحد مع الصور والمقاسات

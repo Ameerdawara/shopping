@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use app\Models\Offer;
+use App\Models\Offer;
+
 use Illuminate\Http\Request;
 
 class OfferController extends Controller
@@ -11,7 +12,7 @@ class OfferController extends Controller
     //  عرض جميع العروض
     public function index()
     {
-        $this->authorize('view', Offer::class);
+     
         return response()->json(
             Offer::with('product')->get()
         );
@@ -19,7 +20,7 @@ class OfferController extends Controller
     // عرض عرض واحد
     public function show($id)
     {
-        $this->authorize('view', Offer::class);
+       
         $offer = Offer::with('product')->findOrFail($id);
         return response()->json($offer);
     }
