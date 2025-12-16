@@ -11,13 +11,8 @@ use App\Http\Controllers\OrderItemController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\NotificationController;
-
-
-/*
-|--------------------------------------------------------------------------
-|  Public Routes (بدون تسجيل دخول)
-|--------------------------------------------------------------------------
-*/
+use App\Http\Controllers\ProductController as ControllersProductController;
+use Illuminate\Http\Request;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);

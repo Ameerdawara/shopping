@@ -9,7 +9,11 @@ use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
 {
+<<<<<<< HEAD
   
+=======
+   
+>>>>>>> b8e0e554382d0eff2a04688ec3f8431b8fa179c3
     /**
      * عرض جميع المنتجات مع الصور والمقاسات
      */
