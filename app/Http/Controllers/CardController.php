@@ -50,15 +50,15 @@ class CardController extends Controller
     }
 
 
-    public function update(UpdateCardRequest $request, Cart $card)
+    public function update(UpdateCardRequest $request, Cart $cart)
     {
-        $this->authorize('update', $card);
+        $this->authorize('update', $cart);
 
-        $card->update($request->validated());
+        $cart->update($request->validated());
 
         return response()->json([
             'message' => 'Card updated successfully',
-            'data' => $card,
+            'data' => $cart,
         ]);
     }
 
