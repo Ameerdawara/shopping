@@ -10,7 +10,6 @@ use App\Policies\ReviewPolicy;
 use App\Policies\NotificationPolicy;
 use App\Models\Offer;
 use App\Policies\CartItemPolicy;
-use App\Policies\CartPolicy;
 use App\Policies\OfferPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 

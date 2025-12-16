@@ -10,7 +10,6 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\CartItemController;
 use App\Http\Controllers\ProductController;
-use App\Http\Controllers\ProductController as ControllersProductController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 

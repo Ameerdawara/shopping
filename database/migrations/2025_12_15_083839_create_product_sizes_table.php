@@ -11,13 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('product_sizes', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('product_id')->constrained()->cascadeOnDelete();
-            $table->string('size');
-            // S, M, L, XL, 42, 44 .. 
-            $table->timestamps();
-        });
+       Schema::create('product_sizes', function (Blueprint $table) {
+    $table->id();
+    $table->foreignId('product_id')->constrained()->cascadeOnDelete();
+    $table->string('size');      // S, M, L...
+    $table->integer('stock');
+    $table->timestamps();
+});
+
     }
 
     /**
