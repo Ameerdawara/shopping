@@ -7,6 +7,7 @@ use App\Models;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+
 class AuthController extends Controller
 {
     //////////////////////////////////regiter
@@ -17,14 +18,13 @@ class AuthController extends Controller
             'name' => 'required|string',
             'email' => 'required|email|unique:users',
             'password' => 'required|min:6|confirmed',
-            'role' => 'required'
         ]);
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => bcrypt($request->password),
-             'role' => $request->role,
+            'role' => 'user', 
         ]);
 
         Auth::login($user);
@@ -36,51 +36,49 @@ class AuthController extends Controller
     ///////////////////////////login
 
 
-public function login(Request $request)
-{
-    $request->validate([
-        'email' => 'required|email',
-        'password' => 'required',
-    ]);
+    public function login(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required',
+        ]);
 
-    $user = User::where('email', $request->email)->first();
+        $user = User::where('email', $request->email)->first();
 
-    if (!$user || !Hash::check($request->password, $user->password)) {
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'message' => 'البيانات غير صحيحة'
+            ], 401);
+        }
+
+        // حذف التوكنات القديمة (اختياري)
+        $user->tokens()->delete();
+
+        // إنشاء توكن جديد
+        $token = $user->createToken('api_token')->plainTextToken;
+
         return response()->json([
-            'message' => 'البيانات غير صحيحة'
-        ], 401);
+            'message' => 'تم تسجيل الدخول بنجاح',
+            'token' => $token,
+            'user' => $user
+        ]);
     }
-
-    // حذف التوكنات القديمة (اختياري)
-    $user->tokens()->delete();
-
-    // إنشاء توكن جديد
-    $token = $user->createToken('api_token')->plainTextToken;
-
-    return response()->json([
-        'message' => 'تم تسجيل الدخول بنجاح',
-        'token' => $token,
-        'user' => $user
-    ]);
-}
 
     //////////////////////////////logout
-  public function logout(Request $request)
-{
-    $user = $request->user();
+    public function logout(Request $request)
+    {
+        $user = $request->user();
 
-    if (!$user) {
+        if (!$user) {
+            return response()->json([
+                'message' => 'غير مصرح'
+            ], 401);
+        }
+
+        $user->currentAccessToken()->delete();
+
         return response()->json([
-            'message' => 'غير مصرح'
-        ], 401);
+            'message' => 'تم تسجيل الخروج بنجاح'
+        ]);
     }
-
-    $user->currentAccessToken()->delete();
-
-    return response()->json([
-        'message' => 'تم تسجيل الخروج بنجاح'
-    ]);
-}
-
-
 }
