@@ -7,49 +7,37 @@ use Illuminate\Http\Request;
 use App\Http\Requests\StoreProfileRequest;
 use App\Http\Requests\UpdateProfileRequest;
 
+use Illuminate\Support\Facades\Auth;
+
 class ProfileController extends Controller
 {
-    public function __construct()
+   public function me()
     {
-        $this->middleware('auth:sanctum'); // أو auth:api
+        $user = Auth::user();
+
+        if (!$user->profile) {
+            return response()->json([
+                'message' => 'Profile not found'
+            ], 404);
+        }
+
+        return response()->json($user->profile);
     }
-
-    public function index()
+     public function updateMe(UpdateProfileRequest $request)
     {
-        return response()->json(Profile::all(), 200);
-    }
+        $user = Auth::user();
 
-    public function show(Profile $profile)
-    {
-        return response()->json($profile, 200);
-    }
+        if (!$user->profile) {
+            return response()->json([
+                'message' => 'Profile not found'
+            ], 404);
+        }
 
-    public function store(StoreProfileRequest $request)
-    {
-        $profile = Profile::create($request->validated());
-
-        return response()->json([
-            'message' => 'Profile created successfully',
-            'data' => $profile,
-        ], 201);
-    }
-
-    public function update(UpdateProfileRequest $request, Profile $profile)
-    {
-        $profile->update($request->validated());
+        $user->profile->update($request->validated());
 
         return response()->json([
             'message' => 'Profile updated successfully',
-            'data' => $profile,
-        ], 200);
-    }
-
-    public function destroy(Profile $profile)
-    {
-        $profile->delete();
-
-        return response()->json([
-            'message' => 'Profile deleted successfully',
-        ], 200);
+            'data' => $user->profile
+        ]);
     }
 }
