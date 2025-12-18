@@ -43,7 +43,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // حذف منتج من السلة 
     Route::delete('carts/{cart}/items/{item}', [CartItemController::class, 'destroy']);
 
-    
+
     Route::post('orders', [OrderController::class, 'store']);
     Route::get('orders/user/{userId}', [OrderController::class, 'getUserOrders']);
 
@@ -55,9 +55,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('reviews/product/{productId}', [ReviewController::class, 'getReviewsByProduct']);
     Route::get('reviews/user/{userId}', [ReviewController::class, 'getReviewsByUser']);
 
-    Route::apiResource('profiles', ProfileController::class)->only([
-        'show', 'update'
-    ]);
+    Route::get('profile', [ProfileController::class, 'me']);
+    Route::put('profile', [ProfileController::class, 'updateMe']);
+
 
     Route::apiResource('notifications', NotificationController::class)
         ->only(['index', 'show', 'destroy']);

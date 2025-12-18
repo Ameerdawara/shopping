@@ -3,15 +3,13 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-    //////////////////////////////////regiter
-
+    /////////////////////// REGISTER
     public function register(Request $request)
     {
         $request->validate([
@@ -24,18 +22,32 @@ class AuthController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => bcrypt($request->password),
-            'role' => 'user', 
+            'role' => 'user',
         ]);
 
-        Auth::login($user);
-        return response()->json($user, 201);
+        // ✅ إنشاء Profile تلقائيًا
+        $user->profile()->create([
+            'name'=> $request->name,
+            'phone' => null,
+            'address' => null,
+        ]);
+        $user->carts()->create([
+            'user_id' => $user->id,
+        ]);
+
+
+        // إنشاء توكن
+        $token = $user->createToken('api_token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'تم التسجيل بنجاح',
+            'token' => $token,
+            'user' => $user->load('profile'),
+            'cart' => $user->carts()->first(),
+        ], 201);
     }
 
-
-
-    ///////////////////////////login
-
-
+    /////////////////////// LOGIN
     public function login(Request $request)
     {
         $request->validate([
@@ -60,22 +72,14 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'تم تسجيل الدخول بنجاح',
             'token' => $token,
-            'user' => $user
+            'user' => $user->load('profile')
         ]);
     }
 
-    //////////////////////////////logout
+    /////////////////////// LOGOUT
     public function logout(Request $request)
     {
-        $user = $request->user();
-
-        if (!$user) {
-            return response()->json([
-                'message' => 'غير مصرح'
-            ], 401);
-        }
-
-        $user->currentAccessToken()->delete();
+        $request->user()->currentAccessToken()->delete();
 
         return response()->json([
             'message' => 'تم تسجيل الخروج بنجاح'
