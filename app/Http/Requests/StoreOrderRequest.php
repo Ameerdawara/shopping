@@ -22,9 +22,9 @@ class StoreOrderRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'user_id' => ['required', 'exists:users,id'],
-            'total_price' => ['required', 'numeric', 'min:0'],
-            'status' => ['required', 'in:pending,paid,shipped,delivered,cancelled'],
+            'user_id' => [ 'exists:users,id'],
+            'total_price' => [ 'numeric', 'min:0','default:0'],
+            'status' => [ 'in:pending,paid,shipped,delivered,cancelled'],
             'delivered_at' => ['nullable', 'date'],
         ];
     }

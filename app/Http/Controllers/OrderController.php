@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Http\Requests\StoreOrderRequest;
 use App\Http\Requests\UpdateOrderRequest;
+use App\Models\Cart;
+use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
 
 
@@ -27,35 +29,45 @@ class OrderController extends Controller
         return response()->json($order, 200);
     }
 
-    public function store(StoreOrderRequest $request)
+    public function store(Request $request)
     {
-        $user = Auth::user();
-        if (!$user) {
-            return response()->json(['message' => 'Unauthorized'], 401);
+        $user = Auth::user(); // أو أي طريقة للحصول على المستخدم
+        $cart = Cart::where('user_id', $user->id)->first();
+
+        if (!$cart || $cart->cartItem->isEmpty()) {
+            return response()->json(['message' => 'Cart is empty'], 400);
+        }
+
+        $totalPrice = 0;
+
+        foreach ($cart->cartItem as $item) {
+            $productPrice = Product::find($item->product_id)->price;
+            $totalPrice += $productPrice * $item->quantity;
         }
 
         $order = Order::create([
-            ...$request->validated(),
             'user_id' => $user->id,
+            'total_price' => $totalPrice,
+            'status' => 'pending',
+            'shipping_address' => $request->input('shipping_address', 'عنوان غير محدد'),
         ]);
 
-        $cart = $user->cart;
-        if ($cart && $cart->cartItem->count() > 0) {
-            foreach ($cart->cartItem as $item) {
-                $order->orderItems()->create([
-                    'product_id' => $item->product_id,
-                    'price'      => $item->price,
-                    'quantity'   => $item->quantity,
-                ]);
-            }
-            $cart->cartItem()->delete();
+        // نقل العناصر من السلة إلى الطلب (مثال)
+        foreach ($cart->cartItem as $item) {
+            $order->orderItem()->create([
+                'product_id' => $item->product_id,
+                'quantity' => $item->quantity,
+                'price' => Product::Find($item->product_id)->price,
+            ]);
         }
+    
 
-        return response()->json([
-            'message' => 'Order created successfully and cart converted to order items',
-            'data'    => $order->load('orderItems'),
-        ], 201);
+        // مسح السلة بعد إنشاء الطلب
+        $cart->cartItem()->delete();
+
+        return response()->json(['message' => 'Order created', 'order' => $order]);
     }
+
 
 
 
