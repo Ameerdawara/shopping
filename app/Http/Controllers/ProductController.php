@@ -30,6 +30,7 @@ class ProductController extends Controller
         'name'        => 'required|string|max:255',
         'description' => 'required|string',
         'price'       => 'required|numeric|min:0',
+        'category'    => 'required|string|max:255',
 
         'images'      => 'array|min:1',
         'images.*'    => 'image|mimes:jpg,jpeg,png,webp|max:2048',
@@ -44,7 +45,8 @@ class ProductController extends Controller
         'name'        => $data['name'],
         'description' => $data['description'],
         'price'       => $data['price'],
-        'buyCount'    => 0
+        'buyCount'    => 0,
+        'category' => $data['category'] ?? 'Uncategorized',
     ]);
 if ($request->hasFile('images')) {
     foreach ($request->file('images') as $image) {
