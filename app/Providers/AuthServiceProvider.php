@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Models\Cart;
+use App\Models\CartItem;
 use App\Models\Review;
 use App\Models\Notification;
 use App\Policies\CartPolicy;
@@ -21,7 +22,7 @@ class AuthServiceProvider extends ServiceProvider
         Notification::class => NotificationPolicy::class,
         Cart::class => CartPolicy::class,
         Offer::class=>OfferPolicy::class,
-        Cart::class=>CartItemPolicy::class,
+        CartItem::class=>CartItemPolicy::class,
     ];
 
     public function boot(): void

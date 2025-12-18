@@ -10,12 +10,13 @@ use App\Models\Cart;
 class CardController extends Controller
 {
 
-    public function index()
-    {
-        $this->authorize('viewAny', Cart::class);
+   public function index($cartId)
+{
+    $cart = Cart::with('cartItems.product')->findOrFail($cartId);
+    $this->authorize('view', $cart);
 
-        return response()->json(Cart::all());
-    }
+    return response()->json($cart);
+}
 
  
     public function show(Cart $cart)

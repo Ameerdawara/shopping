@@ -11,8 +11,6 @@ use App\Http\Controllers\OrderItemController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\ProductController as ControllersProductController;
-use Illuminate\Http\Request;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -40,9 +38,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('carts/{cart}/items', [CartItemController::class, 'index']);
     Route::post('carts/{cart}/items', [CartItemController::class, 'store']);
+    //تعديل منتج واحد مثلا نقص زيادة من سلة 
     Route::put('carts/{cart}/items/{item}', [CartItemController::class, 'update']);
+    // حذف منتج من السلة 
     Route::delete('carts/{cart}/items/{item}', [CartItemController::class, 'destroy']);
 
+    
     Route::post('orders', [OrderController::class, 'store']);
     Route::get('orders/user/{userId}', [OrderController::class, 'getUserOrders']);
 

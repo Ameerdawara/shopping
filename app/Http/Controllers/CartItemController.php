@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Cart;
 use App\Models\CartItem;
+use App\Models\Product;
 use Illuminate\Http\Request;
 
 class CartItemController extends Controller
@@ -11,13 +12,13 @@ class CartItemController extends Controller
     /**
      * عرض عناصر السلة
      */
-    public function index($cartId)
-    {
-        $cart = Cart::with('cartItem.product')->findOrFail($cartId);
-        $this->authorize('view', $cart);
+   public function index($cartId)
+{
+    $cart = Cart::with('cartItem.product')->findOrFail($cartId);
+    $this->authorize('view', $cart);
 
-        return response()->json($cart->cartItem);
-    }
+    return response()->json($cart);
+}
 
     /**
      * إضافة منتج إلى السلة
@@ -38,13 +39,19 @@ class CartItemController extends Controller
             ->first();
 
         if ($item) {
-            $item->increment('quantity', $data['quantity'] ?? 1);
+            $product = Product::findOrFail($data['product_id']);
+
+            $item->update([
+                'quantity'   => $item->quantity + ($data['quantity'] ?? 1),
+                'unit_price' => $product->price,
+            ]);
         } else {
+            $product = Product::findOrFail($data['product_id']);
             $item = CartItem::create([
                 'cart_id'    => $cartId,
                 'product_id' => $data['product_id'],
                 'quantity'   => $data['quantity'] ?? 1,
-                'unit_price' => $item->product->price ?? 0
+                'unit_price' => $product->price ?? 0
             ]);
         }
 
