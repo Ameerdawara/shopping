@@ -22,11 +22,11 @@ class StoreProfileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'image' => ['required', 'string', 'max:255'],
+            'image' => ['sometimes', 'string', 'max:255'],
             'user_id' => ['required', 'exists:users,id'],
             'bio' => ['required', 'string', 'max:500'],
             'phone' => ['nullable', 'string', 'max:20'],
-            'total_purchases' => ['required', 'numeric', 'min:0'],
+            'total_purchases' => ['sometimes', 'numeric', 'min:0'],
         ];
     }
 }
