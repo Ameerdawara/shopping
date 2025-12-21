@@ -12,6 +12,8 @@ use App\Policies\NotificationPolicy;
 use App\Models\Offer;
 use App\Policies\CartItemPolicy;
 use App\Policies\OfferPolicy;
+use App\Models\Ad;
+use App\Policies\AdPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 
 class AuthServiceProvider extends ServiceProvider
@@ -23,6 +25,7 @@ class AuthServiceProvider extends ServiceProvider
         Cart::class => CartPolicy::class,
         Offer::class=>OfferPolicy::class,
         CartItem::class=>CartItemPolicy::class,
+        Ad::class => AdPolicy::class,
     ];
 
     public function boot(): void
