@@ -24,31 +24,30 @@ class ProductController extends Controller
 {
     $this->authorize('create', Product::class);
 
-    $allowedSizes = ['S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
-
     $data = $request->validate([
         'name'        => 'required|string|max:255',
         'description' => 'required|string',
         'price'       => 'required|numeric|min:0',
         'category'    => 'required|string|max:255',
 
-        'images'      => 'array|min:1',
-        'images.*'    => 'image|mimes:jpg,jpeg,png,webp|max:2048',
+        // الصور
+        'images'   => 'required|array|min:1',
+        'images.*' => 'image|mimes:jpg,jpeg,png,webp|max:2048',
 
-        'sizes'              => 'array|min:1',
-        'sizes.*.size'       => ['required', 'string', Rule::in($allowedSizes)],
-        'sizes.*.price'      => 'nullable|numeric|min:0',
-        'sizes.*.stock'      => 'required|integer|min:0',
+        // المقاسات
+        'sizes'        => 'required|array|min:1',
+        'sizes.*.size' => 'required|string|max:50',
     ]);
 
     $product = Product::create([
         'name'        => $data['name'],
         'description' => $data['description'],
         'price'       => $data['price'],
+        'category'    => $data['category'],
         'buyCount'    => 0,
-        'category' => $data['category'] ?? 'Uncategorized',
     ]);
-if ($request->hasFile('images')) {
+
+    /* حفظ الصور */
     foreach ($request->file('images') as $image) {
         $path = $image->store('products', 'public');
 
@@ -56,18 +55,13 @@ if ($request->hasFile('images')) {
             'image' => $path,
         ]);
     }
-}
 
-  if (isset($data['sizes'])) {
+    /* حفظ المقاسات */
     foreach ($data['sizes'] as $size) {
         $product->sizes()->create([
-            'size'  => $size['size'],
-            'price' => $size['price'] ?? null,
-            'stock' => $size['stock'],
+            'size' => $size['size'],
         ]);
     }
-}
-
 
     return response()->json(
         $product->load(['images', 'sizes']),
@@ -75,49 +69,49 @@ if ($request->hasFile('images')) {
     );
 }
 
-
-    /**
-     * عرض منتج واحد مع الصور والمقاسات
-     */
-    public function show(Product $product)
-    {
-        return response()->json($product->load(['images', 'sizes']));
-    }
-
     /**
      * تحديث منتج (Admin فقط)
      */
-    public function update(Request $request, Product $product)
-    {
-        $this->authorize('update', $product);
+   public function update(Request $request, Product $product)
+{
+    $this->authorize('update', $product);
 
-        $allowedSizes = ['S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
+    $data = $request->validate([
+        'name'        => 'sometimes|string|max:255',
+        'description' => 'sometimes|string',
+        'price'       => 'sometimes|numeric|min:0',
+        'category'    => 'sometimes|string|max:255',
+        'buyCount'    => 'sometimes|integer|min:0',
 
-        $data = $request->validate([
-            'name'        => 'sometimes|string|max:255',
-            'description' => 'sometimes|string',
-            'price'       => 'sometimes|numeric|min:0',
-            'buyCount'    => 'sometimes|integer|min:0',
+        // الصور (اختياري)
+        'images'   => 'sometimes|array|min:1',
+        'images.*' => 'image|mimes:jpg,jpeg,png,webp|max:2048',
 
-            'sizes'              => 'sometimes|array|min:1',
-            'sizes.*.size'       => ['required', 'string', Rule::in($allowedSizes)],
-            'sizes.*.price'      => 'nullable|numeric|min:0',
-            'sizes.*.stock'      => 'required|integer|min:0',
-        ]);
+        // المقاسات (اختياري)
+        'sizes'        => 'sometimes|array|min:1',
+        'sizes.*.size' => 'required|string|max:50',
+    ]);
 
-        // تحديث بيانات المنتج
-        $product->update($data);
+    /* تحديث بيانات المنتج الأساسية */
+    $product->update(
+        collect($data)->except(['images', 'sizes'])->toArray()
+    );
 
-        // تحديث المقاسات إذا أرسلت
-        if (!empty($data['sizes'])) {
-            $product->sizes()->delete(); // حذف القديم
-            foreach ($data['sizes'] as $size) {
-                $product->sizes()->create($size);
-            }
+    /* تحديث المقاسات إذا أُرسلت */
+    if (isset($data['sizes'])) {
+        $product->sizes()->delete();
+
+        foreach ($data['sizes'] as $size) {
+            $product->sizes()->create([
+                'size' => $size['size'],
+            ]);
         }
-
-        return response()->json($product->load('sizes'));
     }
+
+    return response()->json(
+        $product->load(['images', 'sizes'])
+    );
+}
 
     /**
      * حذف منتج (Admin فقط)
