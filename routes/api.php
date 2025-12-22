@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProductController;
@@ -88,4 +89,7 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
 
     Route::apiResource('order-items', OrderItemController::class)
         ->only(['destroy']);
+
+    Route::apiResource('ads', AdController::class);
+    Route::delete('ads/{ad}', [AdController::class, 'destroy']);
 });
