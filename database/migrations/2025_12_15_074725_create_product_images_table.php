@@ -17,6 +17,7 @@ return new class extends Migration
                 ->constrained('products')
                 ->cascadeOnDelete();
             $table->string('image');
+            $table->string('color');
             $table->timestamps();
         });
     }
