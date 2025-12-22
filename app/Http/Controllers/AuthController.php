@@ -28,7 +28,8 @@ class AuthController extends Controller
         // ✅ إنشاء Profile تلقائيًا
         $user->profile()->create([
             'name' => $request->name,
-            'phone' => null,
+            'email' => $request->email,
+            'phone' => $request->phone,
             'address' => null,
         ]);
         $user->carts()->create([
@@ -55,7 +56,7 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-       
+
         $user = User::where('email', $request->email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
