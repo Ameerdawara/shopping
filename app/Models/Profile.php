@@ -10,7 +10,7 @@ class Profile extends Model
         'name',
         'image',
         'user_id',
-        'bio',
+        'email',
         'phone',
         'total_purchases',
     ];
