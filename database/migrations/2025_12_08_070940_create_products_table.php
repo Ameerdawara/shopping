@@ -18,6 +18,7 @@ return new class extends Migration
             $table->float('price');
             $table->integer('buyCount');
             $table->string('category');
+            $table->string('brand');
             $table->timestamps();
         });
     }

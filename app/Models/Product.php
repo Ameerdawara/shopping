@@ -6,6 +6,15 @@ use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
 {
+    protected $fillable =
+    [
+        'name',
+        'description',
+        'price',
+        'buyCount',
+        'category',
+        'brand'
+    ];
     public function cartItems()
     {
         return $this->hasMany(CartItem::class);
@@ -22,7 +31,7 @@ class Product extends Model
     {
         return $this->hasMany(OrderItem::class);
     }
-    public $guarded = ['id'];
+
     public function images()
     {
         return $this->hasMany(ProductImage::class);
