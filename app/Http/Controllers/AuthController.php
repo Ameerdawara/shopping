@@ -30,6 +30,7 @@ class AuthController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'phone' => $request->phone,
+            'password' => bcrypt($request->password),
             'address' => null,
         ]);
         $user->carts()->create([
