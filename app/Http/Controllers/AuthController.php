@@ -44,6 +44,7 @@ class AuthController extends Controller
             'token' => $token,
             'user' => $user->load('profile'),
             'cart' => $user->carts()->first(),
+            'role' =>'user'
         ], 201);
     }
 
