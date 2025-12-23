@@ -13,6 +13,11 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\NotificationController;
 
+/*
+|--------------------------------------------------------------------------
+| Public Routes
+|--------------------------------------------------------------------------
+*/
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
@@ -24,52 +29,75 @@ Route::get('offers/{offer}', [OfferController::class, 'show']);
 
 /*
 |--------------------------------------------------------------------------
-|  Authenticated User Routes
+| Authenticated User Routes
 |--------------------------------------------------------------------------
 */
-
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/logout', [AuthController::class, 'logout']);
 
-    Route::apiResource('carts', CardController::class);
-    Route::get('users/{userId}/cart', [CardController::class, 'getUserCart']);
-    Route::delete('users/{userId}/cart/clear', [CardController::class, 'clearCart']);
-    Route::get('users/{userId}/cart/total', [CardController::class, 'calculateTotal']);
+    /*
+    |----------------------------------
+    | NEW (Token-based Cart Routes)
+    |----------------------------------
+    */
+    Route::get('/cart', [CardController::class, 'myCart']);
+    Route::get('/cart/total', [CardController::class, 'myCartTotal']);
+    Route::delete('/cart/clear', [CardController::class, 'clearMyCart']);
 
+    /*
+    |----------------------------------
+    | OLD Routes (keep as-is)
+    |----------------------------------
+    */
+    Route::apiResource('carts', CardController::class);
+
+    /*
+    | Cart Items
+    */
     Route::get('carts/{cart}/items', [CartItemController::class, 'index']);
     Route::post('carts/{cart}/items', [CartItemController::class, 'store']);
-    //تعديل منتج واحد مثلا نقص زيادة من سلة 
     Route::put('carts/{cart}/items/{item}', [CartItemController::class, 'update']);
-    // حذف منتج من السلة 
     Route::delete('carts/{cart}/items/{item}', [CartItemController::class, 'destroy']);
 
-
+    /*
+    | Orders
+    */
     Route::post('orders', [OrderController::class, 'store']);
     Route::get('orders/user/{userId}', [OrderController::class, 'getUserOrders']);
 
+    /*
+    | Order Items
+    */
     Route::get('order-items/order/{orderId}', [OrderItemController::class, 'getItemsByOrder']);
 
+    /*
+    | Reviews
+    */
     Route::apiResource('reviews', ReviewController::class)
         ->only(['store', 'update', 'destroy']);
 
     Route::get('reviews/product/{productId}', [ReviewController::class, 'getReviewsByProduct']);
     Route::get('reviews/user/{userId}', [ReviewController::class, 'getReviewsByUser']);
 
+    /*
+    | Profile
+    */
     Route::get('profile', [ProfileController::class, 'me']);
     Route::put('profile', [ProfileController::class, 'updateMe']);
 
-
+    /*
+    | Notifications
+    */
     Route::apiResource('notifications', NotificationController::class)
         ->only(['index', 'show', 'destroy']);
 });
 
 /*
 |--------------------------------------------------------------------------
-|    Admin Routes
+| Admin Routes
 |--------------------------------------------------------------------------
 */
-
 Route::middleware(['auth:sanctum', 'admin'])->group(function () {
 
     Route::apiResource('products', ProductController::class)

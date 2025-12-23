@@ -5,20 +5,22 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreCardRequest;
 use App\Http\Requests\UpdateCardRequest;
 use App\Models\Cart;
+use Illuminate\Support\Facades\Auth;
+
 
 
 class CardController extends Controller
 {
 
-   public function index($cartId)
-{
-    $cart = Cart::with('cartItems.product')->findOrFail($cartId);
-    $this->authorize('view', $cart);
+    public function index($cartId)
+    {
+        $cart = Cart::with('cartItems.product')->findOrFail($cartId);
+        $this->authorize('view', $cart);
 
-    return response()->json($cart);
-}
+        return response()->json($cart);
+    }
 
- 
+
     public function show(Cart $cart)
     {
         $this->authorize('view', $cart);
@@ -50,7 +52,7 @@ class CardController extends Controller
         ]);
     }
 
-    
+
 
     public function update(UpdateCardRequest $request, Cart $cart)
     {
@@ -64,45 +66,39 @@ class CardController extends Controller
         ]);
     }
 
- 
-    public function getUserCart($userId)
-    {
-        $cart = Cart::where('user_id', $userId)->firstOrFail();
 
-        $this->authorize('view', $cart);
+    public function myCart()
+    {
+        $cart = Cart::where('user_id', Auth::id())
+            ->with('cartItem.product')
+            ->firstOrFail();
 
         return response()->json($cart);
     }
 
- 
-    public function clearCart($userId)
+    public function myCartTotal()
     {
-        $cart = Cart::where('user_id', $userId)->firstOrFail();
-
-        $this->authorize('update', $cart);
-
-        $cart->cartItem()->delete();
-
-        return response()->json([
-            'message' => 'Cart cleared successfully'
-        ]);
-    }
-
-
-    public function calculateTotal($userId)
-    {
-        $cart = Cart::where('user_id', $userId)
+        $cart = Cart::where('user_id', Auth::id())
             ->with('cartItem')
             ->firstOrFail();
 
-        $this->authorize('view', $cart);
-
-        $total = $cart->cartItem->sum(fn ($item) =>
+        $total = $cart->cartItem->sum(
+            fn($item) =>
             $item->quantity * $item->unit_price
         );
 
         return response()->json([
             'total_price' => $total
+        ]);
+    }
+
+    public function clearMyCart()
+    {
+        $cart = Cart::where('user_id', Auth::id())->firstOrFail();
+        $cart->cartItem()->delete();
+
+        return response()->json([
+            'message' => 'Cart cleared successfully'
         ]);
     }
 }
