@@ -38,8 +38,8 @@ public function store(Request $request)
             'images.*.color'       => 'required|string|max:50',
 
             // المقاسات
-            'sizes'                => 'required|array|min:1',
-            'sizes.*.size'         => 'required|string|max:50',
+            'sizes'                => 'array|min:1',
+            'sizes.*.size'         => 'string|max:50',
         ]);
 
         // إنشاء المنتج
