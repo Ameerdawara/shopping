@@ -22,10 +22,14 @@ class UpdateProfileRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'name'  => ['sometimes', 'string', 'max:255'],
+            'email' => ['sometimes', 'email'],
+            'password' => ['nullable', 'confirmed', 'min:8'],
+
+            // profiles table
             'image' => ['sometimes', 'string', 'max:255'],
             'bio' => ['sometimes', 'string', 'max:500'],
             'phone' => ['nullable', 'string', 'max:20'],
-            'total_purchases' => ['sometimes', 'numeric', 'min:0'],
         ];
     }
 }
