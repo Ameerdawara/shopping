@@ -20,7 +20,7 @@ class ProductController extends Controller
     /**
      * إنشاء منتج مع صور ومقاسات
      */
-public function store(Request $request)
+    public function store(Request $request)
     {
         $this->authorize('create', Product::class);
 
@@ -38,8 +38,8 @@ public function store(Request $request)
             'images.*.color'       => 'required|string|max:50',
 
             // المقاسات
-            'sizes'                => 'array|min:1',
-            'sizes.*.size'         => 'string|max:50',
+            'sizes'                => 'nullable|array|min:1',
+            'sizes.*.size'         => 'nullable|string|max:50',
         ]);
 
         // إنشاء المنتج
@@ -63,11 +63,14 @@ public function store(Request $request)
         }
 
         // حفظ المقاسات
-        foreach ($data['sizes'] as $size) {
-            $product->sizes()->create([
-                'size' => $size['size'],
-            ]);
+        if (!empty($data['sizes'])) {
+            foreach ($data['sizes'] as $size) {
+                $product->sizes()->create([
+                    'size' => $size['size'],
+                ]);
+            }   
         }
+
 
         return response()->json(
             $product->load(['images', 'sizes']),
@@ -77,51 +80,51 @@ public function store(Request $request)
     /**
      * تحديث منتج (Admin فقط)
      */
-   public function update(Request $request, Product $product)
-{
-    $this->authorize('update', $product);
+    public function update(Request $request, Product $product)
+    {
+        $this->authorize('update', $product);
 
-    $data = $request->validate([
-        // بيانات المنتج
-        'name'        => 'sometimes|string|max:255',
-        'description' => 'sometimes|string',
-        'price'       => 'sometimes|numeric|min:0',
-        'category'    => 'sometimes|string|max:255',
-        'brand'       => 'sometimes|string|max:255',
-        'buyCount'    => 'sometimes|integer|min:0',
+        $data = $request->validate([
+            // بيانات المنتج
+            'name'        => 'sometimes|string|max:255',
+            'description' => 'sometimes|string',
+            'price'       => 'sometimes|numeric|min:0',
+            'category'    => 'sometimes|string|max:255',
+            'brand'       => 'sometimes|string|max:255',
+            'buyCount'    => 'sometimes|integer|min:0',
 
-        // الصور + اللون (اختياري)
-        'images'               => 'sometimes|array|min:1',
-        'images.*.file'        => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
-        'images.*.color'       => 'required|string|max:50',
+            // الصور + اللون (اختياري)
+            'images'               => 'sometimes|array|min:1',
+            'images.*.file'        => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'images.*.color'       => 'required|string|max:50',
 
-        // المقاسات (اختياري)
-        'sizes'                => 'sometimes|array|min:1',
-        'sizes.*.size'         => 'required|string|max:50',
-    ]);
+            // المقاسات (اختياري)
+            'sizes'                => 'sometimes|array|min:1',
+            'sizes.*.size'         => 'required|string|max:50',
+        ]);
 
-    /* تحديث بيانات المنتج الأساسية */
-    $product->update(
-        collect($data)->except(['images', 'sizes'])->toArray()
-    );
+        /* تحديث بيانات المنتج الأساسية */
+        $product->update(
+            collect($data)->except(['images', 'sizes'])->toArray()
+        );
 
-    /* تحديث المقاسات */
-    if (isset($data['sizes'])) {
-        $product->sizes()->delete();
+        /* تحديث المقاسات */
+        if (isset($data['sizes'])) {
+            $product->sizes()->delete();
 
-        foreach ($data['sizes'] as $size) {
-            $product->sizes()->create([
-                'size' => $size['size'],
-            ]);
+            foreach ($data['sizes'] as $size) {
+                $product->sizes()->create([
+                    'size' => $size['size'],
+                ]);
+            }
         }
+
+
+        return response()->json(
+            $product->load(['images', 'sizes']),
+            200
+        );
     }
-
-
-    return response()->json(
-        $product->load(['images', 'sizes']),
-        200
-    );
-}
     /**
      * حذف منتج (Admin فقط)
      */
