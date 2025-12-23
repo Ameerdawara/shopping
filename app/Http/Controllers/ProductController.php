@@ -20,55 +20,60 @@ class ProductController extends Controller
     /**
      * إنشاء منتج مع صور ومقاسات
      */
-   public function store(Request $request)
-{
-    $this->authorize('create', Product::class);
+public function store(Request $request)
+    {
+        $this->authorize('create', Product::class);
 
-    $data = $request->validate([
-        'name'        => 'required|string|max:255',
-        'description' => 'required|string',
-        'price'       => 'required|numeric|min:0',
-        'category'    => 'required|string|max:255',
+        $data = $request->validate([
+            // بيانات المنتج
+            'name'        => 'required|string|max:255',
+            'description' => 'required|string',
+            'price'       => 'required|numeric|min:0',
+            'category'    => 'required|string|max:255',
+            'brand'       => 'nullable|string|max:255',
 
-        // الصور
-        'images'   => 'required|array|min:1',
-        'images.*' => 'image|mimes:jpg,jpeg,png,webp|max:2048',
+            // الصور + اللون
+            'images'               => 'required|array|min:1',
+            'images.*.file'        => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'images.*.color'       => 'required|string|max:50',
 
-        // المقاسات
-        'sizes'        => 'required|array|min:1',
-        'sizes.*.size' => 'required|string|max:50',
-    ]);
-
-    $product = Product::create([
-        'name'        => $data['name'],
-        'description' => $data['description'],
-        'price'       => $data['price'],
-        'category'    => $data['category'],
-        'buyCount'    => 0,
-    ]);
-
-    /* حفظ الصور */
-    foreach ($request->file('images') as $image) {
-        $path = $image->store('products', 'public');
-
-        $product->images()->create([
-            'image' => $path,
+            // المقاسات
+            'sizes'                => 'required|array|min:1',
+            'sizes.*.size'         => 'required|string|max:50',
         ]);
-    }
 
-    /* حفظ المقاسات */
-    foreach ($data['sizes'] as $size) {
-        $product->sizes()->create([
-            'size' => $size['size'],
+        // إنشاء المنتج
+        $product = Product::create([
+            'name'        => $data['name'],
+            'description' => $data['description'],
+            'price'       => $data['price'],
+            'category'    => $data['category'],
+            'brand'       => $data['brand'] ?? 'N/A',
+            'buyCount'    => 0,
         ]);
+
+        // حفظ الصور مع اللون
+        foreach ($data['images'] as $img) {
+            $path = $img['file']->store('products', 'public');
+
+            $product->images()->create([
+                'image' => $path,
+                'color' => $img['color'],
+            ]);
+        }
+
+        // حفظ المقاسات
+        foreach ($data['sizes'] as $size) {
+            $product->sizes()->create([
+                'size' => $size['size'],
+            ]);
+        }
+
+        return response()->json(
+            $product->load(['images', 'sizes']),
+            201
+        );
     }
-
-    return response()->json(
-        $product->load(['images', 'sizes']),
-        201
-    );
-}
-
     /**
      * تحديث منتج (Admin فقط)
      */
@@ -77,19 +82,22 @@ class ProductController extends Controller
     $this->authorize('update', $product);
 
     $data = $request->validate([
+        // بيانات المنتج
         'name'        => 'sometimes|string|max:255',
         'description' => 'sometimes|string',
         'price'       => 'sometimes|numeric|min:0',
         'category'    => 'sometimes|string|max:255',
+        'brand'       => 'sometimes|string|max:255',
         'buyCount'    => 'sometimes|integer|min:0',
 
-        // الصور (اختياري)
-        'images'   => 'sometimes|array|min:1',
-        'images.*' => 'image|mimes:jpg,jpeg,png,webp|max:2048',
+        // الصور + اللون (اختياري)
+        'images'               => 'sometimes|array|min:1',
+        'images.*.file'        => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
+        'images.*.color'       => 'required|string|max:50',
 
         // المقاسات (اختياري)
-        'sizes'        => 'sometimes|array|min:1',
-        'sizes.*.size' => 'required|string|max:50',
+        'sizes'                => 'sometimes|array|min:1',
+        'sizes.*.size'         => 'required|string|max:50',
     ]);
 
     /* تحديث بيانات المنتج الأساسية */
@@ -97,7 +105,7 @@ class ProductController extends Controller
         collect($data)->except(['images', 'sizes'])->toArray()
     );
 
-    /* تحديث المقاسات إذا أُرسلت */
+    /* تحديث المقاسات */
     if (isset($data['sizes'])) {
         $product->sizes()->delete();
 
@@ -108,11 +116,12 @@ class ProductController extends Controller
         }
     }
 
+
     return response()->json(
-        $product->load(['images', 'sizes'])
+        $product->load(['images', 'sizes']),
+        200
     );
 }
-
     /**
      * حذف منتج (Admin فقط)
      */
