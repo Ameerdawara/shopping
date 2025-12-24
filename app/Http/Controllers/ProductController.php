@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use App\Models\ProductSize;
 use Illuminate\Http\Request;
@@ -14,9 +15,10 @@ class ProductController extends Controller
      */
     public function index()
     {
-        return response()->json(Product::with(['images', 'sizes'])->get());
+        return ProductResource::collection(
+            Product::with(['images', 'sizes'])->get()
+        );
     }
-
     /**
      * إنشاء منتج مع صور ومقاسات
      */
@@ -68,13 +70,12 @@ class ProductController extends Controller
                 $product->sizes()->create([
                     'size' => $size['size'],
                 ]);
-            }   
+            }
         }
 
 
-        return response()->json(
-            $product->load(['images', 'sizes']),
-            201
+        return new ProductResource(
+            $product->load(['images', 'sizes'])
         );
     }
     /**
@@ -120,9 +121,8 @@ class ProductController extends Controller
         }
 
 
-        return response()->json(
-            $product->load(['images', 'sizes']),
-            200
+        return new ProductResource(
+            $product->load(['images', 'sizes'])
         );
     }
     /**
@@ -137,5 +137,14 @@ class ProductController extends Controller
         return response()->json([
             'message' => 'Product deleted successfully'
         ]);
+    }
+    // ProductController.php
+    public function byCategory($category)
+    {
+        return ProductResource::collection(
+            Product::with('images')
+                ->where('category', $category)
+                ->get()
+        );
     }
 }

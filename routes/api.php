@@ -26,6 +26,9 @@ Route::get('products/{product}', [ProductController::class, 'show']);
 
 Route::get('offers', [OfferController::class, 'index']);
 Route::get('offers/{offer}', [OfferController::class, 'show']);
+// routes/api.php
+Route::get('/products/category/{category}', [ProductController::class, 'byCategory']);
+
 
 Route::get('ads', [AdController::class, 'index']);
 
