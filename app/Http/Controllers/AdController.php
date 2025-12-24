@@ -9,19 +9,39 @@ use Illuminate\Http\Request;
 
 class AdController extends Controller
 {
+    public function index()
+    {
+        $ads = Ad::where('active', true)->latest()->get();
+
+        return response()->json([
+            'ads' => $ads
+        ]);
+    }
+
 
 
     public function store(StoreAdRequest $request)
     {
         $this->authorize('create', Ad::class);
 
-        $ad = Ad::create($request->validated());
+        $data = [];
+
+        $data['title'] = $request->title;
+        $data['description'] = $request->description;
+        $data['btn_text'] = $request->btn_text;
+
+        if ($request->hasFile('image')) {
+            $data['image'] = $request->file('image')->store('ads', 'public');
+        }
+
+        $ad = Ad::create($data);
 
         return response()->json([
             'message' => 'تم إنشاء الإعلان بنجاح',
             'ad' => $ad
-        ]);;
+        ]);
     }
+
 
     public function update(UpdateAdRequest $request, Ad $ad)
     {
