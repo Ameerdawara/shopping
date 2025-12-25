@@ -9,6 +9,8 @@ class Ad extends Model
     protected $fillable = [
         'title',
         'image',
+        'description',
+        'btn_text',
         'active',
     ];
 }

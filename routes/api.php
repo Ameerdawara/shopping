@@ -30,6 +30,8 @@ Route::get('offers/{offer}', [OfferController::class, 'show']);
 Route::get('/products/category/{category}', [ProductController::class, 'byCategory']);
 
 
+Route::get('ads', [AdController::class, 'index']);
+
 /*
 |--------------------------------------------------------------------------
 | Authenticated User Routes
@@ -121,6 +123,7 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::apiResource('order-items', OrderItemController::class)
         ->only(['destroy']);
 
-    Route::apiResource('ads', AdController::class);
+    Route::apiResource('ads', AdController::class)
+    ->except(['index']);
     Route::delete('ads/{ad}', [AdController::class, 'destroy']);
 });

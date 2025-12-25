@@ -3,19 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Models\Offer;
-
+use App\Models\Product;
 use Illuminate\Http\Request;
 
 class OfferController extends Controller
 {
 
     //  عرض جميع العروض
-    public function index()
-    {
-     
-        return response()->json(
-            Offer::with('product')->get()
-        );
+   public function index()
+{
+    return response()->json(
+        Product::with(['productImages', 'offer'])->get()
+    );
+
     }
     // عرض عرض واحد
     public function show($id)

@@ -8,10 +8,11 @@ use Illuminate\Auth\Access\Response;
 
 class AdPolicy
 {
-    public function viewAny(User $user)
-    {
-        return $user->is_admin;
-    }
+   public function viewAny(?User $user = null)
+{
+    return true;
+}
+
 
     public function create(User $user)
     {
