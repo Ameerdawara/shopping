@@ -42,4 +42,14 @@ class Product extends Model
     {
         return $this->hasMany(ProductSize::class);
     }
+    protected $appends = ['image_url'];
+
+public function getImageUrlAttribute()
+{
+    if ($this->images->count()) {
+        return asset('storage/' . $this->images->first()->image);
+    }
+    return null;
+}
+    
 }
