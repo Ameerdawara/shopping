@@ -12,13 +12,13 @@ class CartItemController extends Controller
     /**
      * عرض عناصر السلة
      */
-   public function index($cartId)
-{
-    $cart = Cart::with('cartItem.product')->findOrFail($cartId);
-    $this->authorize('view', $cart);
+    public function index($cartId)
+    {
+        $cart = Cart::with('cartItem.product')->findOrFail($cartId);
+        $this->authorize('view', $cart);
 
-    return response()->json($cart);
-}
+        return response()->json($cart);
+    }
 
     /**
      * إضافة منتج إلى السلة
@@ -30,7 +30,9 @@ class CartItemController extends Controller
 
         $data = $request->validate([
             'product_id' => 'required|exists:products,id',
-            'quantity'   => 'sometimes|integer|min:1'
+            'quantity'   => 'sometimes|integer|min:1',
+            'color' => 'string|nullable',
+            'size' => 'string|nullable'
         ]);
 
         // هل المنتج موجود مسبقًا؟
@@ -44,6 +46,8 @@ class CartItemController extends Controller
             $item->update([
                 'quantity'   => $item->quantity + ($data['quantity'] ?? 1),
                 'unit_price' => $product->price,
+                'color'      => $data['color'] ?? $item->color,
+                'size'       => $data['size'] ?? $item->size
             ]);
         } else {
             $product = Product::findOrFail($data['product_id']);
@@ -51,7 +55,9 @@ class CartItemController extends Controller
                 'cart_id'    => $cartId,
                 'product_id' => $data['product_id'],
                 'quantity'   => $data['quantity'] ?? 1,
-                'unit_price' => $product->price ?? 0
+                'unit_price' => $product->price ?? 0,
+                'color' => $data['color'],
+                'size' => $data['size']
             ]);
         }
 
