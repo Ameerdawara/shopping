@@ -29,7 +29,7 @@ Route::get('offers/{offer}', [OfferController::class, 'show']);
 // routes/api.php
 Route::get('/products/category/{category}', [ProductController::class, 'byCategory']);
 
-
+Route::get('/products/{product}', [ProductController::class, 'show']);
 Route::get('ads', [AdController::class, 'index']);
 
 /*

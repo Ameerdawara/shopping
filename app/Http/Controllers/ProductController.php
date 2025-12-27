@@ -20,6 +20,16 @@ class ProductController extends Controller
         );
     }
     /**
+ * عرض منتج واحد حسب الـ ID
+ */
+public function show(Product $product)
+{
+    return new ProductResource(
+        $product->load(['images', 'sizes'])
+    );
+}
+
+    /**
      * إنشاء منتج مع صور ومقاسات
      */
     public function store(Request $request)
