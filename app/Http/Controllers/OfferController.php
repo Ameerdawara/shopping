@@ -31,6 +31,7 @@ class OfferController extends Controller
         $this->authorize('create', Offer::class);
         $data = $request->validate([
             'product_id' => 'required|exists:products,id',
+            'description' => 'nullable|string',
             'discount_percentage' => 'nullable|numeric|min:0|max:100',
             'discount_price' => 'nullable|numeric|min:0',
             'starts_at' => 'nullable|date',
