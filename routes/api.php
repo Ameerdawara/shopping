@@ -12,6 +12,8 @@ use App\Http\Controllers\OrderItemController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\NotificationController;
+use App\Models\Cart;
+use Illuminate\Http\Request;
 
 /*
 |--------------------------------------------------------------------------
@@ -29,6 +31,16 @@ Route::get('offers/{offer}', [OfferController::class, 'show']);
 // routes/api.php
 Route::get('/products/category/{category}', [ProductController::class, 'byCategory']);
 
+Route::get('/products/{product}', [ProductController::class, 'show']);
+Route::get('ads', [AdController::class, 'index']);
+
+
+//جلب my cart_id
+// routes/api.php
+Route::middleware('auth:sanctum')->get('/my-cart', function (Request $request) {
+    $cart = Cart::firstOrCreate(['user_id' => $request->user()->id]);
+    return response()->json($cart);
+});
 
 Route::get('ads', [AdController::class, 'index']);
 
