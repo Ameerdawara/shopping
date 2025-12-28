@@ -51,5 +51,15 @@ public function getImageUrlAttribute()
     }
     return null;
 }
-    
+    protected static function booted()
+{
+    static::deleting(function ($product) {
+        // حذف الخصم
+        $product->offer()?->delete();
+
+        // حذف الصور
+        $product->images()->delete();
+    });
+}
+
 }
