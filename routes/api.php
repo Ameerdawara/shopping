@@ -42,6 +42,8 @@ Route::middleware('auth:sanctum')->get('/my-cart', function (Request $request) {
     return response()->json($cart);
 });
 
+Route::get('ads', [AdController::class, 'index']);
+
 /*
 |--------------------------------------------------------------------------
 | Authenticated User Routes
