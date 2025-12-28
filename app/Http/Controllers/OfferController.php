@@ -10,13 +10,18 @@ class OfferController extends Controller
 {
 
     //  عرض جميع العروض
-   public function index()
+    public function index()
 {
-    return response()->json(
-        Product::with(['productImages', 'offer'])->get()
-    );
+    $offers = Offer::with([
+        'product',
+        'product.images'
+    ])->get();
 
-    }
+    return response()->json([
+        'offers' => $offers
+    ]);
+}
+
     // عرض عرض واحد
     public function show($id)
     {

@@ -21,7 +21,7 @@ class Product extends Model
     }
     public function offer()
     {
-        return $this->belongsTo(Offer::class);
+        return $this->hasOne(Offer::class);
     }
     public function reviews()
     {
@@ -42,4 +42,24 @@ class Product extends Model
     {
         return $this->hasMany(ProductSize::class);
     }
+    protected $appends = ['image_url'];
+
+public function getImageUrlAttribute()
+{
+    if ($this->images->count()) {
+        return asset('storage/' . $this->images->first()->image);
+    }
+    return null;
+}
+    protected static function booted()
+{
+    static::deleting(function ($product) {
+        // حذف الخصم
+        $product->offer()?->delete();
+
+        // حذف الصور
+        $product->images()->delete();
+    });
+}
+
 }
