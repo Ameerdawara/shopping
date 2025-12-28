@@ -13,10 +13,21 @@ class ProductController extends Controller
     /**
      * عرض جميع المنتجات مع الصور والمقاسات
      */
-    public function index()
+    public function index(Request $request)
     {
+        $query = Product::with(['images', 'sizes']);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
         return ProductResource::collection(
-            Product::with(['images', 'sizes'])->get()
+            $query->limit(10)->get()
         );
     }
     /**
