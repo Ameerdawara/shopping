@@ -94,6 +94,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('reviews', ReviewController::class)
         ->only(['store', 'update', 'destroy']);
 
+        
     Route::get('reviews/product/{productId}', [ReviewController::class, 'getReviewsByProduct']);
     Route::get('reviews/user/{userId}', [ReviewController::class, 'getReviewsByUser']);
 
