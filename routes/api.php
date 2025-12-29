@@ -33,7 +33,7 @@ Route::get('/products/category/{category}', [ProductController::class, 'byCatego
 
 Route::get('/products/{product}', [ProductController::class, 'show']);
 Route::get('ads', [AdController::class, 'index']);
-
+ Route::get('reviews/product/{productId}', [ReviewController::class, 'getReviewsByProduct']);
 
 //جلب my cart_id
 // routes/api.php
@@ -95,7 +95,7 @@ Route::middleware('auth:sanctum')->group(function () {
         ->only(['store', 'update', 'destroy']);
 
         
-    Route::get('reviews/product/{productId}', [ReviewController::class, 'getReviewsByProduct']);
+   
     Route::get('reviews/user/{userId}', [ReviewController::class, 'getReviewsByUser']);
 
     /*
