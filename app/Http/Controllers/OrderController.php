@@ -71,15 +71,25 @@ class OrderController extends Controller
 
 
 
-    public function update(UpdateOrderRequest $request, Order $order)
-    {
-        $order->update($request->validated());
+   public function updateOrder(Request $request, $id)
+{
+    $order = Order::findOrFail($id);
 
-        return response()->json([
-            'message' => 'Order updated successfully',
-            'data' => $order
-        ]);
-    }
+    $validated = $request->validate([
+        'status' => 'sometimes|string|in:pending,processing,cancelled',
+        'shipping_address' => 'sometimes|string',
+        'delivered_at' => 'nullable|date',
+    ]);
+
+
+    $order->update($validated);
+
+    return response()->json([
+        'message' => 'Order updated successfully',
+        'data' => $order
+    ]);
+}
+
 
     public function destroy(Order $order)
     {

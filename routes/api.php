@@ -20,6 +20,7 @@ use Illuminate\Http\Request;
 | Public Routes
 |--------------------------------------------------------------------------
 */
+
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
@@ -33,7 +34,7 @@ Route::get('/products/category/{category}', [ProductController::class, 'byCatego
 
 Route::get('/products/{product}', [ProductController::class, 'show']);
 Route::get('ads', [AdController::class, 'index']);
- Route::get('reviews/product/{productId}', [ReviewController::class, 'getReviewsByProduct']);
+Route::get('reviews/product/{productId}', [ReviewController::class, 'getReviewsByProduct']);
 
 //جلب my cart_id
 // routes/api.php
@@ -83,6 +84,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('orders', [OrderController::class, 'store']);
     Route::get('orders/user/{userId}', [OrderController::class, 'getUserOrders']);
     Route::get('/admin/orders', [OrderController::class, 'getOrdersToAdmin']);
+    Route::put('/orders/{id}/status', [OrderController::class, 'updateOrder']);
 
 
     /*
@@ -96,8 +98,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('reviews', ReviewController::class)
         ->only(['store', 'update', 'destroy']);
 
-        
-   
+
+
     Route::get('reviews/user/{userId}', [ReviewController::class, 'getReviewsByUser']);
 
     /*
@@ -139,6 +141,6 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
         ->only(['destroy']);
 
     Route::apiResource('ads', AdController::class)
-    ->except(['index']);
+        ->except(['index']);
     Route::delete('ads/{ad}', [AdController::class, 'destroy']);
 });
