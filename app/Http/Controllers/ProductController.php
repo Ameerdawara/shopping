@@ -36,9 +36,10 @@ class ProductController extends Controller
     public function show(Product $product)
     {
         return new ProductResource(
-            $product->load(['images', 'sizes'])
+            $product->load(['images', 'sizes', 'activeOffer'])
         );
     }
+
 
     /**
      * إنشاء منتج مع صور ومقاسات
