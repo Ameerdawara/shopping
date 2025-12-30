@@ -15,7 +15,7 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Product::with(['images', 'sizes']);
+        $query = Product::with(['images', 'sizes', 'activeOffer']);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -30,6 +30,7 @@ class ProductController extends Controller
             $query->limit(10)->get()
         );
     }
+
     /**
      * عرض منتج واحد حسب الـ ID
      */
@@ -164,7 +165,7 @@ class ProductController extends Controller
     public function byCategory($category)
     {
         return ProductResource::collection(
-            Product::with('images')
+            Product::with(['images', 'activeOffer'])
                 ->where('category', $category)
                 ->get()
         );
