@@ -11,21 +11,21 @@ class OfferController extends Controller
 
     //  عرض جميع العروض
     public function index()
-{
-    $offers = Offer::with([
-        'product',
-        'product.images'
-    ])->get();
+    {
+        $offers = Offer::with([
+            'product',
+            'product.images'
+        ])->get();
 
-    return response()->json([
-        'offers' => $offers
-    ]);
-}
+        return response()->json([
+            'offers' => $offers
+        ]);
+    }
 
     // عرض عرض واحد
     public function show($id)
     {
-       
+
         $offer = Offer::with('product')->findOrFail($id);
         return response()->json($offer);
     }
@@ -43,6 +43,15 @@ class OfferController extends Controller
             'ends_at' => 'nullable|date|after_or_equal:starts_at',
             'is_active' => 'boolean',
         ]);
+        // التأكد أن المنتج لا يملك عرضًا نشطًا
+        $product = Product::with('activeOffer')->findOrFail($data['product_id']);
+
+        if ($product->activeOffer) {
+            return response()->json([
+                'message' => 'هذا المنتج لديه خصم بالفعل ولا يمكن إضافة خصم آخر'
+            ], 422);
+        }
+
         $offer = Offer::create($data);
 
         return response()->json($offer, 201);
