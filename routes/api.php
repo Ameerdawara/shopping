@@ -24,7 +24,7 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::get('products', [ProductController::class, 'index']);
-Route::get('products/{product}', [ProductController::class, 'show']);
+Route::get('products/{productId}', [ProductController::class, 'show']);
 
 Route::get('offers', [OfferController::class, 'index']);
 Route::get('offers/{offer}', [OfferController::class, 'show']);
@@ -82,6 +82,8 @@ Route::middleware('auth:sanctum')->group(function () {
     */
     Route::post('orders', [OrderController::class, 'store']);
     Route::get('orders/user/{userId}', [OrderController::class, 'getUserOrders']);
+    Route::get('/admin/orders', [OrderController::class, 'getOrdersToAdmin']);
+
 
     /*
     | Order Items

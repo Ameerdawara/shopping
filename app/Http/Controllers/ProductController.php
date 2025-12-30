@@ -33,12 +33,19 @@ class ProductController extends Controller
     /**
      * عرض منتج واحد حسب الـ ID
      */
-    public function show(Product $product)
-    {
-        return new ProductResource(
-            $product->load(['images', 'sizes'])
-        );
+   public function show($productId)
+{
+    // جلب المنتج مع العلاقات المطلوبة
+    $product = Product::with(['images', 'sizes'])->find($productId);
+
+    if (!$product) {
+        return response()->json([
+            'message' => 'المنتج غير موجود'
+        ], 404);
     }
+
+    return new ProductResource($product);
+}
 
     /**
      * إنشاء منتج مع صور ومقاسات

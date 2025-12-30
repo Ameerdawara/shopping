@@ -60,7 +60,7 @@ class OrderController extends Controller
                 'price' => Product::Find($item->product_id)->price,
             ]);
         }
-    
+
 
         // مسح السلة بعد إنشاء الطلب
         $cart->cartItem()->delete();
@@ -118,4 +118,17 @@ class OrderController extends Controller
             'total_sales' => $monthlySales
         ], 200);
     }
+   public function getOrdersToAdmin()
+{
+    $orders = Order::with([
+        'user:id,name',
+        'user.profile:id,user_id,phone',
+        'orderItem.product:id,name'
+    ])->get();
+
+    return response()->json([
+        'data' => $orders
+    ]);
+}
+
 }
