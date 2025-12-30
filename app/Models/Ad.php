@@ -10,7 +10,6 @@ class Ad extends Model
         'title',
         'image',
         'description',
-        'btn_text',
         'active',
     ];
 }

@@ -28,7 +28,6 @@ class AdController extends Controller
 
         $data['title'] = $request->title;
         $data['description'] = $request->description;
-        $data['btn_text'] = $request->btn_text;
 
         if ($request->hasFile('image')) {
             $data['image'] = $request->file('image')->store('ads', 'public');
