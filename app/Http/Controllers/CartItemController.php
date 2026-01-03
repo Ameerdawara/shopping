@@ -31,8 +31,8 @@ class CartItemController extends Controller
         $data = $request->validate([
             'product_id' => 'required|exists:products,id',
             'quantity'   => 'sometimes|integer|min:1',
-            'color' => 'string|nullable',
-            'size' => 'string|nullable'
+            'color' => 'string',
+            'size' => 'string'
         ]);
 
         // هل المنتج موجود مسبقًا؟

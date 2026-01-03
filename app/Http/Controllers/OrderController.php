@@ -50,6 +50,7 @@ class OrderController extends Controller
             'total_price' => $totalPrice,
             'status' => 'pending',
             'shipping_address' => $request->input('shipping_address', 'عنوان غير محدد'),
+
         ]);
 
         // نقل العناصر من السلة إلى الطلب (مثال)
@@ -58,6 +59,8 @@ class OrderController extends Controller
                 'product_id' => $item->product_id,
                 'quantity' => $item->quantity,
                 'price' => Product::Find($item->product_id)->price,
+                'color' => $item->color,
+                'size' => $item->size,
             ]);
         }
 
@@ -102,7 +105,7 @@ class OrderController extends Controller
 
     public function getUserOrders()
     {
-    
+
         $user = Auth::user();
         $orders = Order::where('user_id', $user->id)->get();
 
