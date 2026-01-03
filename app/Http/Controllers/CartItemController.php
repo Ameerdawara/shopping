@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Cart;
 use App\Models\CartItem;
+use App\Models\Offer;
 use App\Models\Product;
 use Illuminate\Http\Request;
 
@@ -31,33 +32,45 @@ class CartItemController extends Controller
         $data = $request->validate([
             'product_id' => 'required|exists:products,id',
             'quantity'   => 'sometimes|integer|min:1',
-            'color' => 'string',
-            'size' => 'string'
+            'color'      => 'nullable|string',
+            'size'       => 'nullable|string'
         ]);
 
-        // هل المنتج موجود مسبقًا؟
+        // جلب المنتج
+        $product = Product::findOrFail($data['product_id']);
+
+        // 🔥 البحث عن العرض (offer) الخاص بالمنتج
+        $offer = Offer::where('product_id', $product->id)
+            ->first();
+
+        // حساب السعر بعد الخصم إذا وُجد عرض
+        $price = $product->price;
+        if ($offer && !empty($offer->discount_percentage) && $offer->discount_percentage > 0) {
+            $price = $price - ($price * ($offer->discount_percentage / 100));
+        }
+
+        // البحث عن عنصر مطابق (product + color + size)
         $item = CartItem::where('cart_id', $cartId)
             ->where('product_id', $data['product_id'])
+            ->where('color', $data['color'] ?? null)
+            ->where('size', $data['size'] ?? null)
             ->first();
 
         if ($item) {
-            $product = Product::findOrFail($data['product_id']);
-
+            // تحديث الكمية فقط (السعر محسوب مسبقًا)
             $item->update([
                 'quantity'   => $item->quantity + ($data['quantity'] ?? 1),
-                'unit_price' => $product->price,
-                'color'      => $data['color'] ?? $item->color,
-                'size'       => $data['size'] ?? $item->size
+                'unit_price' => $price,
             ]);
         } else {
-            $product = Product::findOrFail($data['product_id']);
+            // إنشاء عنصر جديد
             $item = CartItem::create([
                 'cart_id'    => $cartId,
                 'product_id' => $data['product_id'],
                 'quantity'   => $data['quantity'] ?? 1,
-                'unit_price' => $product->price ?? 0,
-                'color' => $data['color'],
-                'size' => $data['size']
+                'unit_price' => $price,
+                'color'      => $data['color'] ?? null,
+                'size'       => $data['size'] ?? null,
             ]);
         }
 
