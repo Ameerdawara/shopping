@@ -18,7 +18,7 @@ return new class extends Migration
             $table->float('price');
             $table->integer('quantity')->default(1);
             $table->string('color');
-            $table->string('size');
+            $table->string('size')->nullable();
             $table->timestamps();
         });
     }

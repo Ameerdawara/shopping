@@ -82,7 +82,7 @@ Route::middleware('auth:sanctum')->group(function () {
     | Orders
     */
     Route::post('orders', [OrderController::class, 'store']);
-    Route::get('orders/user/{userId}', [OrderController::class, 'getUserOrders']);
+    Route::get('orders/user', [OrderController::class, 'getUserOrders']);
     Route::get('/admin/orders', [OrderController::class, 'getOrdersToAdmin']);
     Route::put('/orders/{id}/status', [OrderController::class, 'updateOrder']);
 
