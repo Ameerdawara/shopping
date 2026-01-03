@@ -71,24 +71,24 @@ class OrderController extends Controller
 
 
 
-   public function updateOrder(Request $request, $id)
-{
-    $order = Order::findOrFail($id);
+    public function updateOrder(Request $request, $id)
+    {
+        $order = Order::findOrFail($id);
 
-    $validated = $request->validate([
-        'status' => 'sometimes|string|in:pending,processing,cancelled',
-        'shipping_address' => 'sometimes|string',
-        'delivered_at' => 'nullable|date',
-    ]);
+        $validated = $request->validate([
+            'status' => 'sometimes|string|in:pending,processing,cancelled',
+            'shipping_address' => 'sometimes|string',
+            'delivered_at' => 'nullable|date',
+        ]);
 
 
-    $order->update($validated);
+        $order->update($validated);
 
-    return response()->json([
-        'message' => 'Order updated successfully',
-        'data' => $order
-    ]);
-}
+        return response()->json([
+            'message' => 'Order updated successfully',
+            'data' => $order
+        ]);
+    }
 
 
     public function destroy(Order $order)
@@ -100,12 +100,15 @@ class OrderController extends Controller
         ]);
     }
 
-    public function getUserOrders($userId)
+    public function getUserOrders()
     {
-        $orders = Order::where('user_id', $userId)->get();
+    
+        $user = Auth::user();
+        $orders = Order::where('user_id', $user->id)->get();
 
         return response()->json($orders, 200);
     }
+
 
 
     public function getOrdersByStatus($status)
@@ -128,17 +131,16 @@ class OrderController extends Controller
             'total_sales' => $monthlySales
         ], 200);
     }
-   public function getOrdersToAdmin()
-{
-    $orders = Order::with([
-        'user:id,name',
-        'user.profile:id,user_id,phone',
-        'orderItem.product:id,name'
-    ])->get();
+    public function getOrdersToAdmin()
+    {
+        $orders = Order::with([
+            'user:id,name',
+            'user.profile:id,user_id,phone',
+            'orderItem.product:id,name'
+        ])->get();
 
-    return response()->json([
-        'data' => $orders
-    ]);
-}
-
+        return response()->json([
+            'data' => $orders
+        ]);
+    }
 }
