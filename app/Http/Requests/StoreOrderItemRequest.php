@@ -26,6 +26,7 @@ class StoreOrderItemRequest extends FormRequest
             'product_id' => ['required', 'exists:products,id'],
             'price'      => ['required', 'numeric', 'min:0'],
             'quantity'   => ['required', 'integer', 'min:1'],
+            'size'   => ['nullable', 'string'],
         ];
     }
 }

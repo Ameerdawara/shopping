@@ -32,7 +32,7 @@ class CartItemController extends Controller
             'product_id' => 'required|exists:products,id',
             'quantity'   => 'sometimes|integer|min:1',
             'color' => 'string',
-            'size' => 'string'
+            'size' => 'string|nullable',
         ]);
 
         // هل المنتج موجود مسبقًا؟
