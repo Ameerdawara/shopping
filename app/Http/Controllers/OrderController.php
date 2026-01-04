@@ -31,45 +31,59 @@ class OrderController extends Controller
 
     public function store(Request $request)
     {
-        $user = Auth::user(); // أو أي طريقة للحصول على المستخدم
+        $user = Auth::user();
+
         $cart = Cart::where('user_id', $user->id)->first();
 
         if (!$cart || $cart->cartItem->isEmpty()) {
-            return response()->json(['message' => 'Cart is empty'], 400);
+            return response()->json([
+                'message' => 'Cart is empty'
+            ], 400);
         }
 
         $totalPrice = 0;
 
         foreach ($cart->cartItem as $item) {
-            $productPrice = Product::find($item->product_id)->price;
-            $totalPrice += $productPrice * $item->quantity;
+            $product = Product::find($item->product_id);
+
+            if ($product) {
+                $totalPrice += $product->price * $item->quantity;
+            }
         }
 
         $order = Order::create([
-            'user_id' => $user->id,
-            'total_price' => $totalPrice,
-            'status' => 'pending',
+            'user_id'          => $user->id,
+            'total_price'      => $totalPrice,
+            'status'           => 'pending',
             'shipping_address' => $request->input('shipping_address', 'عنوان غير محدد'),
-
         ]);
 
-        // نقل العناصر من السلة إلى الطلب (مثال)
         foreach ($cart->cartItem as $item) {
-            $order->orderItem()->create([
+
+            $orderItemData = [
                 'product_id' => $item->product_id,
-                'quantity' => $item->quantity,
-                'price' => Product::Find($item->product_id)->price,
-                'color' => $item->color,
-                'size' => $item->size,
-            ]);
+                'quantity'   => $item->quantity,
+                'price'      => Product::find($item->product_id)->price,
+                'color'      => $item->color,
+            ];
+
+            // إضافة الحجم فقط إذا كان موجودًا
+            if (!empty($item->size)) {
+                $orderItemData['size'] = $item->size;
+            }
+
+            $order->orderItem()->create($orderItemData);
         }
 
-
-        // مسح السلة بعد إنشاء الطلب
+        // تفريغ السلة بعد إنشاء الطلب
         $cart->cartItem()->delete();
 
-        return response()->json(['message' => 'Order created', 'order' => $order]);
+        return response()->json([
+            'message' => 'Order created successfully',
+            'order'   => $order
+        ], 201);
     }
+
 
 
 
