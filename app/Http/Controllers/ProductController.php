@@ -164,28 +164,37 @@ public function destroy(Product $product)
 {
     $this->authorize('delete', $product);
 
-    // ✅ منع الحذف إذا المنتج مستخدم في طلبات
-    if ($product->orderItems()->exists()) {
+    // 🔴 منع الحذف إذا المنتج مرتبط بطلبات غير منتهية
+    $hasActiveOrders = $product->orderItems()
+        ->whereHas('order', function ($q) {
+            $q->where('status', 'pending');
+        })
+        ->exists();
+
+    if ($hasActiveOrders) {
         return response()->json([
-            'message' => 'لا يمكن حذف المنتج لأنه مستخدم في طلبات'
+            'message' => 'لا يمكن حذف المنتج لأنه مرتبط بطلبات قيد التنفيذ'
         ], 409);
     }
 
     DB::transaction(function () use ($product) {
-
-        // ✅ حذف المنتج أولاً
+        $product->orderItems()
+            ->whereHas('order', fn ($q) =>
+                $q->whereIn('status', ['cancelled', 'processing'])
+            )
+            ->delete();
         $product->delete();
 
-        // ✅ حذف الصورة فقط بعد نجاح الحذف
         if ($product->image && Storage::exists($product->image)) {
             Storage::delete($product->image);
         }
     });
 
     return response()->json([
-        'message' => 'Product deleted successfully'
+        'message' => 'تم حذف المنتج بنجاح'
     ]);
 }
+
 
     // ProductController.php
     public function byCategory($category)
