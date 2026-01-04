@@ -7,7 +7,8 @@ use App\Models\Product;
 use App\Models\ProductSize;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-
+  use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 class ProductController extends Controller
 {
     /**
@@ -157,16 +158,35 @@ class ProductController extends Controller
     /**
      * حذف منتج (Admin فقط)
      */
-    public function destroy(Product $product)
-    {
-        $this->authorize('delete', $product);
+  
 
+public function destroy(Product $product)
+{
+    $this->authorize('delete', $product);
+
+    // ✅ منع الحذف إذا المنتج مستخدم في طلبات
+    if ($product->orderItems()->exists()) {
+        return response()->json([
+            'message' => 'لا يمكن حذف المنتج لأنه مستخدم في طلبات'
+        ], 409);
+    }
+
+    DB::transaction(function () use ($product) {
+
+        // ✅ حذف المنتج أولاً
         $product->delete();
 
-        return response()->json([
-            'message' => 'Product deleted successfully'
-        ]);
-    }
+        // ✅ حذف الصورة فقط بعد نجاح الحذف
+        if ($product->image && Storage::exists($product->image)) {
+            Storage::delete($product->image);
+        }
+    });
+
+    return response()->json([
+        'message' => 'Product deleted successfully'
+    ]);
+}
+
     // ProductController.php
     public function byCategory($category)
     {
