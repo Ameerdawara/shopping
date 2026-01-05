@@ -28,12 +28,13 @@ class OrderController extends Controller
     {
         return response()->json($order, 200);
     }
-
     public function store(Request $request)
     {
         $user = Auth::user();
 
-        $cart = Cart::where('user_id', $user->id)->first();
+        $cart = Cart::where('user_id', $user->id)
+            ->with('cartItem')
+            ->first();
 
         if (!$cart || $cart->cartItem->isEmpty()) {
             return response()->json([
@@ -43,12 +44,9 @@ class OrderController extends Controller
 
         $totalPrice = 0;
 
+        // ✅ حساب السعر من السلة (بعد الخصم)
         foreach ($cart->cartItem as $item) {
-            $product = Product::find($item->product_id);
-
-            if ($product) {
-                $totalPrice += $product->price * $item->quantity;
-            }
+            $totalPrice += $item->unit_price * $item->quantity;
         }
 
         $order = Order::create([
@@ -63,11 +61,10 @@ class OrderController extends Controller
             $orderItemData = [
                 'product_id' => $item->product_id,
                 'quantity'   => $item->quantity,
-                'price'      => Product::find($item->product_id)->price,
+                'price'      => $item->unit_price, // ✅ السعر بعد الخصم
                 'color'      => $item->color,
             ];
 
-            // إضافة الحجم فقط إذا كان موجودًا
             if (!empty($item->size)) {
                 $orderItemData['size'] = $item->size;
             }
@@ -75,7 +72,7 @@ class OrderController extends Controller
             $order->orderItem()->create($orderItemData);
         }
 
-        // تفريغ السلة بعد إنشاء الطلب
+        // تفريغ السلة
         $cart->cartItem()->delete();
 
         return response()->json([
@@ -83,6 +80,7 @@ class OrderController extends Controller
             'order'   => $order
         ], 201);
     }
+
 
 
 
