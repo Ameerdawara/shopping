@@ -115,14 +115,18 @@ class OrderController extends Controller
         ]);
     }
 
-    public function getUserOrders()
-    {
+    public function getUserOrders(Request $request)
+{
+    $orders = Order::with([
+        'orderItem.product'
+    ])
+    ->where('user_id', $request->user()->id)
+    ->orderBy('created_at', 'desc')
+    ->get();
 
-        $user = Auth::user();
-        $orders = Order::where('user_id', $user->id)->get();
+    return response()->json($orders);
+}
 
-        return response()->json($orders, 200);
-    }
 
 
 
