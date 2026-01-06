@@ -173,7 +173,7 @@ public function destroy(Product $product)
 
     if ($hasActiveOrders) {
         return response()->json([
-            'message' => 'لا يمكن حذف المنتج لأنه مرتبط بطلبات قيد التنفيذ'
+            'message' => 'لا يمكن حذف المنتج لأنه مرتبط بطلبات قيد الانتظار'
         ], 409);
     }
 
