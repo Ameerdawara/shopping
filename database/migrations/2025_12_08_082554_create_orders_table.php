@@ -14,13 +14,9 @@ return new class extends Migration
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users');
-            $table->foreignId('payment_id')->constrained('payments');
-            $table->string('order_number')->unique();
             $table->float('total_price');       
             $table->string('status')->default('pending'); 
-            $table->string('shipping_address');           
-            $table->string('shipping_city');              
-            $table->string('shipping_phone');              
+            $table->string('shipping_address');              
             $table->timestamp('delivered_at')->nullable(); 
             $table->timestamps();
         });

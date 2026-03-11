@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Offer;
-
+use App\Models\Product;
 use Illuminate\Http\Request;
 
 class OfferController extends Controller
@@ -12,15 +12,20 @@ class OfferController extends Controller
     //  عرض جميع العروض
     public function index()
     {
-     
-        return response()->json(
-            Offer::with('product')->get()
-        );
+        $offers = Offer::with([
+            'product',
+            'product.images'
+        ])->get();
+
+        return response()->json([
+            'offers' => $offers
+        ]);
     }
+
     // عرض عرض واحد
     public function show($id)
     {
-       
+
         $offer = Offer::with('product')->findOrFail($id);
         return response()->json($offer);
     }
@@ -31,12 +36,22 @@ class OfferController extends Controller
         $this->authorize('create', Offer::class);
         $data = $request->validate([
             'product_id' => 'required|exists:products,id',
+            'description' => 'nullable|string',
             'discount_percentage' => 'nullable|numeric|min:0|max:100',
             'discount_price' => 'nullable|numeric|min:0',
             'starts_at' => 'nullable|date',
             'ends_at' => 'nullable|date|after_or_equal:starts_at',
             'is_active' => 'boolean',
         ]);
+        // التأكد أن المنتج لا يملك عرضًا نشطًا
+        $product = Product::with('activeOffer')->findOrFail($data['product_id']);
+
+        if ($product->activeOffer) {
+            return response()->json([
+                'message' => 'هذا المنتج لديه خصم بالفعل ولا يمكن إضافة خصم آخر'
+            ], 422);
+        }
+
         $offer = Offer::create($data);
 
         return response()->json($offer, 201);

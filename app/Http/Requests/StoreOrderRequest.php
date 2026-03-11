@@ -22,14 +22,9 @@ class StoreOrderRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'user_id' => ['required', 'exists:users,id'],
-            'payment_id' => ['required', 'exists:payments,id'],
-            'order_number' => ['required', 'string', 'max:255', 'unique:orders,order_number'],
-            'total_price' => ['required', 'numeric', 'min:0'],
-            'status' => ['required', 'in:pending,paid,shipped,delivered,cancelled'],
-            'shipping_address' => ['required', 'string', 'max:255'],
-            'shipping_city' => ['required', 'string', 'max:255'],
-            'shipping_phone' => ['required', 'string', 'max:20'],
+            'user_id' => [ 'exists:users,id'],
+            'total_price' => [ 'numeric', 'min:0','default:0'],
+            'status' => [ 'in:pending,paid,shipped,delivered,cancelled'],
             'delivered_at' => ['nullable', 'date'],
         ];
     }

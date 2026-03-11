@@ -2,86 +2,112 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use App\Models\ProductSize;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-
+  use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 class ProductController extends Controller
 {
     /**
      * عرض جميع المنتجات مع الصور والمقاسات
      */
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(Product::with(['images', 'sizes'])->get());
+        $query = Product::with(['images', 'sizes', 'activeOffer']);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        return ProductResource::collection(
+            $query->limit(10)->get()
+        );
     }
+
+    /**
+     * عرض منتج واحد حسب الـ ID
+     */
+   public function show($productId)
+{
+    // جلب المنتج مع العلاقات المطلوبة
+    $product = Product::with(['images', 'sizes'])->find($productId);
+
+    if (!$product) {
+        return response()->json([
+            'message' => 'المنتج غير موجود'
+        ], 404);
+    }
+
+    return new ProductResource($product);
+}
 
     /**
      * إنشاء منتج مع صور ومقاسات
      */
-   public function store(Request $request)
-{
-    $this->authorize('create', Product::class);
-
-    $allowedSizes = ['S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
-
-    $data = $request->validate([
-        'name'        => 'required|string|max:255',
-        'description' => 'required|string',
-        'price'       => 'required|numeric|min:0',
-
-        'images'      => 'array|min:1',
-        'images.*'    => 'image|mimes:jpg,jpeg,png,webp|max:2048',
-
-        'sizes'              => 'array|min:1',
-        'sizes.*.size'       => ['required', 'string', Rule::in($allowedSizes)],
-        'sizes.*.price'      => 'nullable|numeric|min:0',
-        'sizes.*.stock'      => 'required|integer|min:0',
-    ]);
-
-    $product = Product::create([
-        'name'        => $data['name'],
-        'description' => $data['description'],
-        'price'       => $data['price'],
-        'buyCount'    => 0
-    ]);
-if ($request->hasFile('images')) {
-    foreach ($request->file('images') as $image) {
-        $path = $image->store('products', 'public');
-
-        $product->images()->create([
-            'image' => $path,
-        ]);
-    }
-}
-
-  if (isset($data['sizes'])) {
-    foreach ($data['sizes'] as $size) {
-        $product->sizes()->create([
-            'size'  => $size['size'],
-            'price' => $size['price'] ?? null,
-            'stock' => $size['stock'],
-        ]);
-    }
-}
-
-
-    return response()->json(
-        $product->load(['images', 'sizes']),
-        201
-    );
-}
-
-
-    /**
-     * عرض منتج واحد مع الصور والمقاسات
-     */
-    public function show(Product $product)
+    public function store(Request $request)
     {
-        return response()->json($product->load(['images', 'sizes']));
-    }
+        $this->authorize('create', Product::class);
 
+        $data = $request->validate([
+            // بيانات المنتج
+            'name'        => 'required|string|max:255',
+            'description' => 'required|string',
+            'price'       => 'required|numeric|min:0',
+            'category'    => 'required|string|max:255',
+            'brand'       => 'nullable|string|max:255',
+
+            // الصور + اللون
+            'images'               => 'required|array|min:1',
+            'images.*.file'        => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'images.*.color'       => 'required|string|max:50',
+
+            // المقاسات
+            'sizes'                => 'nullable|array|min:1',
+            'sizes.*.size'         => 'nullable|string|max:50',
+        ]);
+
+        // إنشاء المنتج
+        $product = Product::create([
+            'name'        => $data['name'],
+            'description' => $data['description'],
+            'price'       => $data['price'],
+            'category'    => $data['category'],
+            'brand'       => $data['brand'] ?? 'N/A',
+            'buyCount'    => 0,
+        ]);
+
+        // حفظ الصور مع اللون
+        foreach ($data['images'] as $img) {
+            $path = $img['file']->store('products', 'public');
+
+            $product->images()->create([
+                'image' => $path,
+                'color' => $img['color'],
+            ]);
+        }
+
+        // حفظ المقاسات
+        if (!empty($data['sizes'])) {
+            foreach ($data['sizes'] as $size) {
+                $product->sizes()->create([
+                    'size' => $size['size'],
+                ]);
+            }
+        }
+
+
+        return new ProductResource(
+            $product->load(['images', 'sizes'])
+        );
+    }
     /**
      * تحديث منتج (Admin فقط)
      */
@@ -89,45 +115,94 @@ if ($request->hasFile('images')) {
     {
         $this->authorize('update', $product);
 
-        $allowedSizes = ['S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
-
         $data = $request->validate([
+            // بيانات المنتج
             'name'        => 'sometimes|string|max:255',
             'description' => 'sometimes|string',
             'price'       => 'sometimes|numeric|min:0',
+            'category'    => 'sometimes|string|max:255',
+            'brand'       => 'sometimes|string|max:255',
             'buyCount'    => 'sometimes|integer|min:0',
 
-            'sizes'              => 'sometimes|array|min:1',
-            'sizes.*.size'       => ['required', 'string', Rule::in($allowedSizes)],
-            'sizes.*.price'      => 'nullable|numeric|min:0',
-            'sizes.*.stock'      => 'required|integer|min:0',
+            // الصور + اللون (اختياري)
+            'images'               => 'sometimes|array|min:1',
+            'images.*.file'        => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'images.*.color'       => 'required|string|max:50',
+
+            // المقاسات (اختياري)
+            'sizes'                => 'sometimes|array|min:1',
+            'sizes.*.size'         => 'required|string|max:50',
         ]);
 
-        // تحديث بيانات المنتج
-        $product->update($data);
+        /* تحديث بيانات المنتج الأساسية */
+        $product->update(
+            collect($data)->except(['images', 'sizes'])->toArray()
+        );
 
-        // تحديث المقاسات إذا أرسلت
-        if (!empty($data['sizes'])) {
-            $product->sizes()->delete(); // حذف القديم
+        /* تحديث المقاسات */
+        if (isset($data['sizes'])) {
+            $product->sizes()->delete();
+
             foreach ($data['sizes'] as $size) {
-                $product->sizes()->create($size);
+                $product->sizes()->create([
+                    'size' => $size['size'],
+                ]);
             }
         }
 
-        return response()->json($product->load('sizes'));
-    }
 
+        return new ProductResource(
+            $product->load(['images', 'sizes'])
+        );
+    }
     /**
      * حذف منتج (Admin فقط)
      */
-    public function destroy(Product $product)
-    {
-        $this->authorize('delete', $product);
+  
 
+public function destroy(Product $product)
+{
+    $this->authorize('delete', $product);
+
+    // 🔴 منع الحذف إذا المنتج مرتبط بطلبات غير منتهية
+    $hasActiveOrders = $product->orderItems()
+        ->whereHas('order', function ($q) {
+            $q->where('status', 'pending');
+        })
+        ->exists();
+
+    if ($hasActiveOrders) {
+        return response()->json([
+            'message' => 'لا يمكن حذف المنتج لأنه مرتبط بطلبات قيد الانتظار'
+        ], 409);
+    }
+
+    DB::transaction(function () use ($product) {
+        $product->orderItems()
+            ->whereHas('order', fn ($q) =>
+                $q->whereIn('status', ['cancelled', 'processing'])
+            )
+            ->delete();
         $product->delete();
 
-        return response()->json([
-            'message' => 'Product deleted successfully'
-        ]);
+        if ($product->image && Storage::exists($product->image)) {
+            Storage::delete($product->image);
+        }
+    });
+
+    return response()->json([
+        'message' => 'تم حذف المنتج بنجاح'
+    ]);
+}
+
+
+    // ProductController.php
+    public function byCategory($category)
+    {
+        return ProductResource::collection(
+            Product::with(['images', 'activeOffer'])
+                ->where('category', $category)
+                ->get()
+        );
     }
 }

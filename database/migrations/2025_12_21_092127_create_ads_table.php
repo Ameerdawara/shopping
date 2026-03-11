@@ -11,12 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('payments', function (Blueprint $table) {
+        Schema::create('ads', function (Blueprint $table) {
             $table->id();
-            $table->float('amount');
-            $table->boolean('is_paid')->default(false);
-            $table->timestamp('paid_at')->nullable();
-            $table->string('status')->default('pending');
+            $table->string('title')->nullable();
+            $table->string('description')->nullable();
+            $table->string('image');
+            $table->boolean('active')->default(true);
             $table->timestamps();
         });
     }
@@ -26,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('payments');
+        Schema::dropIfExists('ads');
     }
 };

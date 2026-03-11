@@ -6,50 +6,66 @@ use App\Models\Profile;
 use Illuminate\Http\Request;
 use App\Http\Requests\StoreProfileRequest;
 use App\Http\Requests\UpdateProfileRequest;
+use Illuminate\Support\Facades\Hash;
+
+
+use Illuminate\Support\Facades\Auth;
 
 class ProfileController extends Controller
 {
-    public function __construct()
+    public function me()
     {
-        $this->middleware('auth:sanctum'); // أو auth:api
-    }
-
-    public function index()
-    {
-        return response()->json(Profile::all(), 200);
-    }
-
-    public function show(Profile $profile)
-    {
-        return response()->json($profile, 200);
-    }
-
-    public function store(StoreProfileRequest $request)
-    {
-        $profile = Profile::create($request->validated());
+        $user = Auth::user();
 
         return response()->json([
-            'message' => 'Profile created successfully',
-            'data' => $profile,
-        ], 201);
+            'name'  => $user->name,
+            'email' => $user->email,
+            'phone' => optional($user->profile)->phone,
+        ]);
     }
 
-    public function update(UpdateProfileRequest $request, Profile $profile)
+
+    public function updateMe(UpdateProfileRequest $request)
     {
-        $profile->update($request->validated());
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        // تحديث الاسم والإيميل
+        if ($request->filled('name')) {
+            $user->name = $request->name;
+        }
+
+        if ($request->filled('email')) {
+            $user->email = $request->email;
+        }
+
+        // تحديث كلمة المرور (إن وُجدت)
+        if ($request->filled('password')) {
+            $user->password = Hash::make($request->password);
+        }
+
+        $user->save();
+
+        // تحديث البروفايل
+        if ($user->profile) {
+            $user->profile->update(
+                $request->only(['image', 'phone', 'bio'])
+            );
+        }
 
         return response()->json([
             'message' => 'Profile updated successfully',
-            'data' => $profile,
-        ], 200);
-    }
-
-    public function destroy(Profile $profile)
-    {
-        $profile->delete();
-
-        return response()->json([
-            'message' => 'Profile deleted successfully',
-        ], 200);
+            'data' => [
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => optional($user->profile)->phone,
+                'image' => optional($user->profile)->image,
+                'bio' => optional($user->profile)->bio,
+            ]
+        ]);
     }
 }

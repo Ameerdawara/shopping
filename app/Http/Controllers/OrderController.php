@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Http\Requests\StoreOrderRequest;
 use App\Http\Requests\UpdateOrderRequest;
+use App\Models\Cart;
+use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
 
 
@@ -26,48 +28,83 @@ class OrderController extends Controller
     {
         return response()->json($order, 200);
     }
-
-    public function store(StoreOrderRequest $request)
+    public function store(Request $request)
     {
         $user = Auth::user();
-        if (!$user) {
-            return response()->json(['message' => 'Unauthorized'], 401);
+
+        $cart = Cart::where('user_id', $user->id)
+            ->with('cartItem')
+            ->first();
+
+        if (!$cart || $cart->cartItem->isEmpty()) {
+            return response()->json([
+                'message' => 'Cart is empty'
+            ], 400);
+        }
+
+        $totalPrice = 0;
+
+        // ✅ حساب السعر من السلة (بعد الخصم)
+        foreach ($cart->cartItem as $item) {
+            $totalPrice += $item->unit_price * $item->quantity;
         }
 
         $order = Order::create([
-            ...$request->validated(),
-            'user_id' => $user->id,
+            'user_id'          => $user->id,
+            'total_price'      => $totalPrice,
+            'status'           => 'pending',
+            'shipping_address' => $request->input('shipping_address', 'عنوان غير محدد'),
         ]);
 
-        $cart = $user->cart;
-        if ($cart && $cart->cartItem->count() > 0) {
-            foreach ($cart->cartItem as $item) {
-                $order->orderItems()->create([
-                    'product_id' => $item->product_id,
-                    'price'      => $item->price,
-                    'quantity'   => $item->quantity,
-                ]);
+        foreach ($cart->cartItem as $item) {
+
+            $orderItemData = [
+                'product_id' => $item->product_id,
+                'quantity'   => $item->quantity,
+                'price'      => $item->unit_price, // ✅ السعر بعد الخصم
+                'color'      => $item->color,
+            ];
+
+            if (!empty($item->size)) {
+                $orderItemData['size'] = $item->size;
             }
-            $cart->cartItem()->delete();
+
+            $order->orderItem()->create($orderItemData);
         }
 
+        // تفريغ السلة
+        $cart->cartItem()->delete();
+
         return response()->json([
-            'message' => 'Order created successfully and cart converted to order items',
-            'data'    => $order->load('orderItems'),
+            'message' => 'Order created successfully',
+            'order'   => $order
         ], 201);
     }
 
 
 
-    public function update(UpdateOrderRequest $request, Order $order)
+
+
+
+    public function updateOrder(Request $request, $id)
     {
-        $order->update($request->validated());
+        $order = Order::findOrFail($id);
+
+        $validated = $request->validate([
+            'status' => 'sometimes|string|in:pending,processing,cancelled',
+            'shipping_address' => 'sometimes|string',
+            'delivered_at' => 'nullable|date',
+        ]);
+
+
+        $order->update($validated);
 
         return response()->json([
             'message' => 'Order updated successfully',
             'data' => $order
         ]);
     }
+
 
     public function destroy(Order $order)
     {
@@ -78,12 +115,19 @@ class OrderController extends Controller
         ]);
     }
 
-    public function getUserOrders($userId)
-    {
-        $orders = Order::where('user_id', $userId)->get();
+    public function getUserOrders(Request $request)
+{
+    $orders = Order::with([
+        'orderItem.product'
+    ])
+    ->where('user_id', $request->user()->id)
+    ->orderBy('created_at', 'desc')
+    ->get();
 
-        return response()->json($orders, 200);
-    }
+    return response()->json($orders);
+}
+
+
 
 
     public function getOrdersByStatus($status)
@@ -105,5 +149,17 @@ class OrderController extends Controller
             'year' => $year,
             'total_sales' => $monthlySales
         ], 200);
+    }
+    public function getOrdersToAdmin()
+    {
+        $orders = Order::with([
+            'user:id,name',
+            'user.profile:id,user_id,phone',
+            'orderItem.product:id,name'
+        ])->get();
+
+        return response()->json([
+            'data' => $orders
+        ]);
     }
 }

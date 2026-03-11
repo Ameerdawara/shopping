@@ -4,14 +4,14 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class UpdateProfileRequest extends FormRequest
+class UpdateAdRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        return true;
+        return  true;
     }
 
     /**
@@ -22,14 +22,9 @@ class UpdateProfileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'  => ['sometimes', 'string', 'max:255'],
-            'email' => ['sometimes', 'email'],
-            'password' => ['nullable', 'confirmed', 'min:8'],
-
-            // profiles table
-            'image' => ['sometimes', 'string', 'max:255'],
-            'bio' => ['sometimes', 'string', 'max:500'],
-            'phone' => ['nullable', 'string', 'max:20'],
+            'title'  => 'nullable|string|max:255',
+            'image'  => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'active' => 'boolean',
         ];
     }
 }

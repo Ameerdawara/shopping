@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Cart;
 use App\Models\CartItem;
+use App\Models\Offer;
+use App\Models\Product;
 use Illuminate\Http\Request;
 
 class CartItemController extends Controller
@@ -16,7 +18,7 @@ class CartItemController extends Controller
         $cart = Cart::with('cartItem.product')->findOrFail($cartId);
         $this->authorize('view', $cart);
 
-        return response()->json($cart->cartItem);
+        return response()->json($cart);
     }
 
     /**
@@ -29,22 +31,46 @@ class CartItemController extends Controller
 
         $data = $request->validate([
             'product_id' => 'required|exists:products,id',
-            'quantity'   => 'sometimes|integer|min:1'
+            'quantity'   => 'sometimes|integer|min:1',
+            'color'      => 'nullable|string',
+            'size'       => 'nullable|string'
         ]);
 
-        // هل المنتج موجود مسبقًا؟
+        // جلب المنتج
+        $product = Product::findOrFail($data['product_id']);
+
+        // 🔥 البحث عن العرض (offer) الخاص بالمنتج
+        $offer = Offer::where('product_id', $product->id)
+            ->first();
+
+        // حساب السعر بعد الخصم إذا وُجد عرض
+        $price = $product->price;
+        if ($offer && !empty($offer->discount_percentage) && $offer->discount_percentage > 0) {
+            $price = $price - ($price * ($offer->discount_percentage / 100));
+        }
+
+        // البحث عن عنصر مطابق (product + color + size)
         $item = CartItem::where('cart_id', $cartId)
             ->where('product_id', $data['product_id'])
+            ->where('color', $data['color'] ?? null)
+            ->where('size', $data['size'] ?? null)
             ->first();
 
         if ($item) {
-            $item->increment('quantity', $data['quantity'] ?? 1);
+            // تحديث الكمية فقط (السعر محسوب مسبقًا)
+            $item->update([
+                'quantity'   => $item->quantity + ($data['quantity'] ?? 1),
+                'unit_price' => $price,
+            ]);
         } else {
+            // إنشاء عنصر جديد
             $item = CartItem::create([
                 'cart_id'    => $cartId,
                 'product_id' => $data['product_id'],
                 'quantity'   => $data['quantity'] ?? 1,
-                'unit_price' => $item->product->price ?? 0
+                'unit_price' => $price,
+                'color'      => $data['color'] ?? null,
+                'size'       => $data['size'] ?? null,
             ]);
         }
 
