@@ -17,7 +17,8 @@ return new class extends Migration
             $table->float('total_price');       
             $table->string('status')->default('pending'); 
             $table->string('shipping_address');              
-            $table->timestamp('delivered_at')->nullable(); 
+            $table->timestamp('delivered_at')->nullable();
+            $table->boolean('is_paid')->default(false); 
             $table->timestamps();
         });
     }

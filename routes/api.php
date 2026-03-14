@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdController;
+use App\Http\Controllers\AddImageController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProductController;
@@ -20,6 +21,14 @@ use Illuminate\Http\Request;
 | Public Routes
 |--------------------------------------------------------------------------
 */
+
+Route::get('/qr-images', function () {
+
+    return response()->json([
+        'shamcash_qr' => asset('public/storage/qr/shamcash.jpg'),
+        'usdt_qr' => asset('publicstorage/qr/usdt.jpg'),
+    ]);
+});
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -51,6 +60,8 @@ Route::get('ads', [AdController::class, 'index']);
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth:sanctum')->group(function () {
+
+
 
     Route::post('/logout', [AuthController::class, 'logout']);
 
@@ -121,6 +132,8 @@ Route::middleware('auth:sanctum')->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth:sanctum', 'admin'])->group(function () {
+
+    Route::post('upload-qr', [AddImageController::class, 'uploadQR']);
 
     Route::apiResource('products', ProductController::class)
         ->except(['index', 'show']);
