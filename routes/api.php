@@ -25,8 +25,8 @@ use Illuminate\Http\Request;
 Route::get('/qr-images', function () {
 
     return response()->json([
-        'shamcash_qr' => asset('storage/qr/shamcash.jpg'),
-        'usdt_qr' => asset('storage/qr/usdt.jpg'),
+        'shamcash_qr' => asset('public/storage/qr/shamcash.jpg'),
+        'usdt_qr' => asset('publicstorage/qr/usdt.jpg'),
     ]);
 });
 
