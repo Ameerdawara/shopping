@@ -53,6 +53,7 @@ class OrderController extends Controller
             'user_id'          => $user->id,
             'total_price'      => $totalPrice,
             'status'           => 'pending',
+            'is_paid' => $request->is_paid,
             'shipping_address' => $request->input('shipping_address', 'عنوان غير محدد'),
         ]);
 
@@ -116,16 +117,16 @@ class OrderController extends Controller
     }
 
     public function getUserOrders(Request $request)
-{
-    $orders = Order::with([
-        'orderItem.product'
-    ])
-    ->where('user_id', $request->user()->id)
-    ->orderBy('created_at', 'desc')
-    ->get();
+    {
+        $orders = Order::with([
+            'orderItem.product'
+        ])
+            ->where('user_id', $request->user()->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
 
-    return response()->json($orders);
-}
+        return response()->json($orders);
+    }
 
 
 
