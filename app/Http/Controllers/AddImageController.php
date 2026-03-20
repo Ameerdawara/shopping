@@ -10,16 +10,16 @@ class AddImageController extends Controller
 
 public function uploadQR(Request $request)
 {
-    // 1. التحقق من البيانات (Validation)
+
     $request->validate([
         'shamcash_qr' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         'usdt_qr'     => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
     ]);
 
     $data = [];
-    $disk = Storage::disk('public'); // استخدام القرص العام لتسهيل التعامل
+    $disk = Storage::disk('public');
 
-    // 2. مصفوفة لتعريف الملفات المطلوبة لتقليل تكرار الكود (DRY Principle)
+    
     $filesToUpload = [
         'shamcash_qr' => 'shamcash.jpg',
         'usdt_qr'     => 'usdt.jpg',

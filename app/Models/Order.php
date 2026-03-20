@@ -15,8 +15,6 @@ class Order extends Model
         'status',
         'is_paid',
         'shipping_address',
-        'shipping_city',
-        'shipping_phone',
         'delivered_at',
     ];
 
