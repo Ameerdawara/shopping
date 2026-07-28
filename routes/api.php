@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\AdController;
 use App\Http\Controllers\AddImageController;
-use App\Http\Controllers\CategoryController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProductController;
@@ -14,6 +13,8 @@ use App\Http\Controllers\OrderItemController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\CategoryController;
+
 use App\Models\Cart;
 use Illuminate\Http\Request;
 
@@ -35,16 +36,14 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::get('products', [ProductController::class, 'index']);
-// ⚠️ يجب أن يبقى هذا المسار قبل products/{productId}، وإلا سيلتقطه Laravel
-// كأن "category" هو productId ولن يصل byCategory أبداً.
-Route::get('products/category/{category}', [ProductController::class, 'byCategory']);
 Route::get('products/{productId}', [ProductController::class, 'show']);
-
-Route::get('categories', [CategoryController::class, 'index']);
 
 Route::get('offers', [OfferController::class, 'index']);
 Route::get('offers/{offer}', [OfferController::class, 'show']);
+// routes/api.php
+Route::get('/products/category/{category}', [ProductController::class, 'byCategory']);
 
+Route::get('/products/{product}', [ProductController::class, 'show']);
 Route::get('ads', [AdController::class, 'index']);
 Route::get('reviews/product/{productId}', [ReviewController::class, 'getReviewsByProduct']);
 
@@ -54,6 +53,8 @@ Route::middleware('auth:sanctum')->get('/my-cart', function (Request $request) {
     $cart = Cart::firstOrCreate(['user_id' => $request->user()->id]);
     return response()->json($cart);
 });
+
+Route::get('ads', [AdController::class, 'index']);
 
 /*
 |--------------------------------------------------------------------------
@@ -138,9 +139,9 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
 
     Route::apiResource('products', ProductController::class)
         ->except(['index', 'show']);
-
     Route::apiResource('categories', CategoryController::class)
         ->only(['store', 'update', 'destroy']);
+
 
     Route::apiResource('offers', OfferController::class)
         ->except(['index', 'show']);
