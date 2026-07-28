@@ -157,3 +157,7 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
         ->except(['index']);
     Route::delete('ads/{ad}', [AdController::class, 'destroy']);
 });
+Route::get('/run-link', function () {
+    \Illuminate\Support\Facades\Artisan::call('storage:link');
+    return 'Storage link created successfully!';
+});
