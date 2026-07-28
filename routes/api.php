@@ -13,8 +13,6 @@ use App\Http\Controllers\OrderItemController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\CategoryController;
-
 use App\Models\Cart;
 use Illuminate\Http\Request;
 
@@ -46,10 +44,6 @@ Route::get('/products/category/{category}', [ProductController::class, 'byCatego
 Route::get('/products/{product}', [ProductController::class, 'show']);
 Route::get('ads', [AdController::class, 'index']);
 Route::get('reviews/product/{productId}', [ReviewController::class, 'getReviewsByProduct']);
-
-// Public category listing (used by the storefront filter and the admin add/edit product forms)
-Route::get('categories', [CategoryController::class, 'index']);
-Route::get('categories/{category}', [CategoryController::class, 'show']);
 
 //جلب my cart_id
 // routes/api.php
@@ -143,9 +137,6 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
 
     Route::apiResource('products', ProductController::class)
         ->except(['index', 'show']);
-    Route::apiResource('categories', CategoryController::class)
-        ->only(['store', 'update', 'destroy']);
-
 
     Route::apiResource('offers', OfferController::class)
         ->except(['index', 'show']);

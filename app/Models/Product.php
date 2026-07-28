@@ -22,7 +22,11 @@ class Product extends Model
     public function offer()
     {
         return $this->hasOne(Offer::class);
-    }
+    }public function category()
+{
+    return $this->belongsTo(Category::class);
+}
+
     public function reviews()
     {
         return $this->hasMany(Review::class);
