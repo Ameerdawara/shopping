@@ -47,6 +47,10 @@ Route::get('/products/{product}', [ProductController::class, 'show']);
 Route::get('ads', [AdController::class, 'index']);
 Route::get('reviews/product/{productId}', [ReviewController::class, 'getReviewsByProduct']);
 
+// Public category listing (used by the storefront filter and the admin add/edit product forms)
+Route::get('categories', [CategoryController::class, 'index']);
+Route::get('categories/{category}', [CategoryController::class, 'show']);
+
 //جلب my cart_id
 // routes/api.php
 Route::middleware('auth:sanctum')->get('/my-cart', function (Request $request) {
