@@ -13,6 +13,7 @@ class Product extends Model
         'price',
         'buyCount',
         'category',
+        'category_id',
         'brand'
     ];
     public function cartItems()
