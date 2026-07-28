@@ -10,7 +10,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('order_items', function (Blueprint $table) {
-            $table->decimal('exchange_rate', 12, 4)->nullable()->after('unit_price');
+            $table->decimal('exchange_rate', 12, 4)->nullable();
         });
     }
 
