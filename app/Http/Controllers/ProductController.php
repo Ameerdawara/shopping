@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\ProductResource;
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductSize;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
   use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 class ProductController extends Controller
 {
     /**
@@ -16,7 +18,7 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Product::with(['images', 'sizes', 'activeOffer']);
+        $query = Product::with(['images', 'sizes', 'activeOffer', 'category']);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -25,6 +27,10 @@ class ProductController extends Controller
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('description', 'like', "%{$search}%");
             });
+        }
+
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
         }
 
         return ProductResource::collection(
@@ -38,7 +44,7 @@ class ProductController extends Controller
    public function show($productId)
 {
     // جلب المنتج مع العلاقات المطلوبة
-    $product = Product::with(['images', 'sizes'])->find($productId);
+    $product = Product::with(['images', 'sizes', 'category'])->find($productId);
 
     if (!$product) {
         return response()->json([
@@ -61,7 +67,9 @@ class ProductController extends Controller
             'name'        => 'required|string|max:255',
             'description' => 'required|string',
             'price'       => 'required|numeric|min:0',
-            'category'    => 'required|string|max:255',
+            // التصنيف: يقبل category_id (الطريقة الجديدة) أو category كنص (توافق مع عملاء API القدامى)
+            'category_id' => 'nullable|exists:categories,id',
+            'category'    => 'required_without:category_id|nullable|string|max:255',
             'brand'       => 'nullable|string|max:255',
 
             // الصور + اللون
@@ -74,12 +82,15 @@ class ProductController extends Controller
             'sizes.*.size'         => 'nullable|string|max:50',
         ]);
 
+        $category = $this->resolveCategory($data);
+
         // إنشاء المنتج
         $product = Product::create([
             'name'        => $data['name'],
             'description' => $data['description'],
             'price'       => $data['price'],
-            'category'    => $data['category'],
+            'category_id' => $category?->id,
+            'category'    => $category?->name, // يبقى العمود النصي متزامناً لأي كود قديم ما زال يقرأه مباشرة
             'brand'       => $data['brand'] ?? 'N/A',
             'buyCount'    => 0,
         ]);
@@ -105,7 +116,7 @@ class ProductController extends Controller
 
 
         return new ProductResource(
-            $product->load(['images', 'sizes'])
+            $product->load(['images', 'sizes', 'category'])
         );
     }
     /**
@@ -120,7 +131,8 @@ class ProductController extends Controller
             'name'        => 'sometimes|string|max:255',
             'description' => 'sometimes|string',
             'price'       => 'sometimes|numeric|min:0',
-            'category'    => 'sometimes|string|max:255',
+            'category_id' => 'sometimes|nullable|exists:categories,id',
+            'category'    => 'sometimes|nullable|string|max:255',
             'brand'       => 'sometimes|string|max:255',
             'buyCount'    => 'sometimes|integer|min:0',
 
@@ -135,9 +147,16 @@ class ProductController extends Controller
         ]);
 
         /* تحديث بيانات المنتج الأساسية */
-        $product->update(
-            collect($data)->except(['images', 'sizes'])->toArray()
-        );
+        $updatePayload = collect($data)->except(['images', 'sizes', 'category', 'category_id'])->toArray();
+
+        // نحدّث التصنيف فقط إذا تم إرساله فعلاً في الطلب، لتجنب مسحه بالخطأ عند تحديث حقول أخرى
+        if (array_key_exists('category_id', $data) || array_key_exists('category', $data)) {
+            $category = $this->resolveCategory($data);
+            $updatePayload['category_id'] = $category?->id;
+            $updatePayload['category']    = $category?->name;
+        }
+
+        $product->update($updatePayload);
 
         /* تحديث المقاسات */
         if (isset($data['sizes'])) {
@@ -152,13 +171,13 @@ class ProductController extends Controller
 
 
         return new ProductResource(
-            $product->load(['images', 'sizes'])
+            $product->load(['images', 'sizes', 'category'])
         );
     }
     /**
      * حذف منتج (Admin فقط)
      */
-  
+
 
 public function destroy(Product $product)
 {
@@ -199,10 +218,40 @@ public function destroy(Product $product)
     // ProductController.php
     public function byCategory($category)
     {
+        $categoryModel = is_numeric($category)
+            ? Category::find($category)
+            : Category::where('slug', $category)->first();
+
+        if (!$categoryModel) {
+            return response()->json([
+                'message' => 'التصنيف غير موجود'
+            ], 404);
+        }
+
         return ProductResource::collection(
-            Product::with(['images', 'activeOffer'])
-                ->where('category', $category)
+            Product::with(['images', 'activeOffer', 'category'])
+                ->where('category_id', $categoryModel->id)
                 ->get()
         );
+    }
+
+    /**
+     * يحوّل بيانات التصنيف القادمة من الطلب (category_id الجديد أو category النصي القديم)
+     * إلى موديل Category واحد، منشئاً تصنيفاً جديداً تلقائياً إذا كان النص غير موجود بعد.
+     */
+    private function resolveCategory(array $data): ?Category
+    {
+        if (!empty($data['category_id'])) {
+            return Category::find($data['category_id']);
+        }
+
+        if (!empty($data['category'])) {
+            return Category::firstOrCreate(
+                ['name' => $data['category']],
+                ['slug' => Str::slug($data['category'])]
+            );
+        }
+
+        return null;
     }
 }
