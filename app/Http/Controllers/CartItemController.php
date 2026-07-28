@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Cart;
 use App\Models\CartItem;
+use App\Models\ExchangeRate;
 use App\Models\Offer;
 use App\Models\Product;
 use Illuminate\Http\Request;
@@ -43,11 +44,15 @@ class CartItemController extends Controller
         $offer = Offer::where('product_id', $product->id)
             ->first();
 
-        // حساب السعر بعد الخصم إذا وُجد عرض
-        $price = $product->price;
+        // حساب السعر الأساسي بعد الخصم إذا وُجد عرض (بالعملة الأساسية)
+        $basePrice = $product->price;
         if ($offer && !empty($offer->discount_percentage) && $offer->discount_percentage > 0) {
-            $price = $price - ($price * ($offer->discount_percentage / 100));
+            $basePrice = $basePrice - ($basePrice * ($offer->discount_percentage / 100));
         }
+
+        // 🔥 تحويل السعر إلى العملة المحلية حسب آخر سعر صرف مُعتمد
+        $exchangeRate = ExchangeRate::current();
+        $price = round($basePrice * $exchangeRate, 2);
 
         // البحث عن عنصر مطابق (product + color + size)
         $item = CartItem::where('cart_id', $cartId)
@@ -57,20 +62,22 @@ class CartItemController extends Controller
             ->first();
 
         if ($item) {
-            // تحديث الكمية فقط (السعر محسوب مسبقًا)
+            // تحديث الكمية والسعر (نعيد حساب السعر بآخر سعر صرف عند كل إضافة)
             $item->update([
-                'quantity'   => $item->quantity + ($data['quantity'] ?? 1),
-                'unit_price' => $price,
+                'quantity'      => $item->quantity + ($data['quantity'] ?? 1),
+                'unit_price'    => $price,
+                'exchange_rate' => $exchangeRate,
             ]);
         } else {
             // إنشاء عنصر جديد
             $item = CartItem::create([
-                'cart_id'    => $cartId,
-                'product_id' => $data['product_id'],
-                'quantity'   => $data['quantity'] ?? 1,
-                'unit_price' => $price,
-                'color'      => $data['color'] ?? null,
-                'size'       => $data['size'] ?? null,
+                'cart_id'       => $cartId,
+                'product_id'    => $data['product_id'],
+                'quantity'      => $data['quantity'] ?? 1,
+                'unit_price'    => $price,
+                'exchange_rate' => $exchangeRate,
+                'color'         => $data['color'] ?? null,
+                'size'          => $data['size'] ?? null,
             ]);
         }
 
@@ -92,6 +99,8 @@ class CartItemController extends Controller
             'quantity' => 'required|integer|min:1'
         ]);
 
+        // تحديث الكمية فقط - السعر وسعر الصرف يبقيان كما أُضيفا أول مرة
+        // (إذا بدك تحديث السعر لآخر سعر صرف عند كل تعديل كمية، خبرني وبضيفها)
         $item->update($data);
 
         return response()->json($item);

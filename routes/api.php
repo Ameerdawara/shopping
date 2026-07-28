@@ -9,6 +9,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\OfferController;
 use App\Http\Controllers\CardController;
 use App\Http\Controllers\CartItemController;
+use App\Http\Controllers\ExchangeRateController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OrderItemController;
 use App\Http\Controllers\ProfileController;
@@ -47,6 +48,9 @@ Route::get('offers/{offer}', [OfferController::class, 'show']);
 
 Route::get('ads', [AdController::class, 'index']);
 Route::get('reviews/product/{productId}', [ReviewController::class, 'getReviewsByProduct']);
+
+// سعر الصرف الحالي (عام - يستخدمه الفرونت لعرض الأسعار المحوّلة)
+Route::get('/exchange-rate', [ExchangeRateController::class, 'show']);
 
 //جلب my cart_id
 // routes/api.php
@@ -160,6 +164,12 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::apiResource('ads', AdController::class)
         ->except(['index']);
     Route::delete('ads/{ad}', [AdController::class, 'destroy']);
+
+    /*
+    | Exchange Rate
+    */
+    Route::post('/exchange-rate', [ExchangeRateController::class, 'update']);
+    Route::get('/exchange-rate/history', [ExchangeRateController::class, 'history']);
 });
 Route::get('/run-link', function () {
     \Illuminate\Support\Facades\Artisan::call('storage:link');

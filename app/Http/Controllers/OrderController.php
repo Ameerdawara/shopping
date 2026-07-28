@@ -9,7 +9,7 @@ use App\Http\Requests\UpdateOrderRequest;
 use App\Models\Cart;
 use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
-
+use App\Models\ExchangeRate;
 
 
 class OrderController extends Controller
@@ -60,6 +60,11 @@ class OrderController extends Controller
         foreach ($cart->cartItem as $item) {
 
             $orderItemData = [
+                 'order_id'      => $order->id,
+               'product_id'    => $item->product_id,
+                 'quantity'      => $item->quantity,
+                'unit_price'    => $item->unit_price,
+         'exchange_rate' => $item->exchange_rate,
                 'product_id' => $item->product_id,
                 'quantity'   => $item->quantity,
                 'price'      => $item->unit_price, // ✅ السعر بعد الخصم
