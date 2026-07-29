@@ -163,7 +163,6 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
 
     Route::apiResource('ads', AdController::class)
         ->except(['index']);
-    Route::delete('ads/{ad}', [AdController::class, 'destroy']);
 
     /*
     | Exchange Rate
