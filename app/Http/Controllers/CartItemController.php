@@ -50,9 +50,11 @@ class CartItemController extends Controller
             $basePrice = $basePrice - ($basePrice * ($offer->discount_percentage / 100));
         }
 
-        // 🔥 تحويل السعر إلى العملة المحلية حسب آخر سعر صرف مُعتمد
+        // ملاحظة: $product->price مخزّن أصلاً بالليرة السورية (SYP)، لذلك لا نضربه
+        // بسعر الصرف هنا. سعر الصرف نخزّنه فقط كسجل تدقيق (audit) لمعرفة
+        // السعر المعتمد وقت إضافة المنتج للسلة، دون أن يؤثر على قيمة unit_price.
         $exchangeRate = ExchangeRate::current();
-        $price = round($basePrice * $exchangeRate, 2);
+        $price = round($basePrice, 2);
 
         // البحث عن عنصر مطابق (product + color + size)
         $item = CartItem::where('cart_id', $cartId)
