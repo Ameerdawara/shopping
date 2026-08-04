@@ -39,7 +39,9 @@ class ShamCashService
             ->post("{$this->baseUrl}/v1/invoices", [
                 // TODO: تأكد من أسماء هذه الحقول حسب التوثيق الرسمي عندك
                 'invoiceNumber' => $invoiceNumber,
-                'amount'        => $amount,
+                // ⚠️ API شام كاش يتوقع amount كنص (string) وليس رقم،
+                // حسب رسالة الخطأ الفعلية "Expected string, received number"
+                'amount'        => (string) $amount,
                 'currency'      => $currency,
                 'description'   => $description,
                 'walletAddress' => config('services.shamcash.wallet_address'),
