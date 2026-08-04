@@ -28,9 +28,21 @@ class OrderController extends Controller
     {
         return response()->json($order, 200);
     }
+
+    /**
+     * إنشاء طلب بالدفع كاش (أو بشكل عام بدون بوابة دفع إلكترونية).
+     * لدفع شام كاش استخدم PaymentController::createShamCashInvoice بدلاً
+     * من هذا المسار.
+     */
     public function store(Request $request)
     {
         $user = Auth::user();
+
+        $data = $request->validate([
+            'shipping_address' => 'nullable|string',
+            'currency'         => 'sometimes|in:SYP,USD',
+            'is_paid'          => 'sometimes|boolean',
+        ]);
 
         $cart = Cart::where('user_id', $user->id)
             ->with('cartItem')
@@ -44,27 +56,27 @@ class OrderController extends Controller
 
         $totalPrice = 0;
 
-        // ✅ حساب السعر من السلة (بعد الخصم)
+        // ✅ حساب السعر من السلة (بعد الخصم) - بالليرة السورية دائماً
         foreach ($cart->cartItem as $item) {
             $totalPrice += $item->unit_price * $item->quantity;
         }
 
+        $currency = $data['currency'] ?? 'SYP';
+
         $order = Order::create([
             'user_id'          => $user->id,
             'total_price'      => $totalPrice,
+            'currency'         => $currency,
+            'payment_method'   => 'cash',
             'status'           => 'pending',
-            'is_paid' => $request->is_paid,
-            'shipping_address' => $request->input('shipping_address', 'عنوان غير محدد'),
+            'is_paid'          => $data['is_paid'] ?? false,
+            'shipping_address' => $data['shipping_address'] ?? 'عنوان غير محدد',
         ]);
 
         foreach ($cart->cartItem as $item) {
 
             $orderItemData = [
-                 'order_id'      => $order->id,
-               'product_id'    => $item->product_id,
-                 'quantity'      => $item->quantity,
-                'unit_price'    => $item->unit_price,
-         'exchange_rate' => $item->exchange_rate,
+                'order_id'   => $order->id,
                 'product_id' => $item->product_id,
                 'quantity'   => $item->quantity,
                 'price'      => $item->unit_price, // ✅ السعر بعد الخصم
@@ -86,11 +98,6 @@ class OrderController extends Controller
             'order'   => $order
         ], 201);
     }
-
-
-
-
-
 
     public function updateOrder(Request $request, $id)
     {

@@ -12,6 +12,7 @@ use App\Http\Controllers\CartItemController;
 use App\Http\Controllers\ExchangeRateController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OrderItemController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\NotificationController;
@@ -51,6 +52,20 @@ Route::get('reviews/product/{productId}', [ReviewController::class, 'getReviewsB
 
 // سعر الصرف الحالي (عام - يستخدمه الفرونت لعرض الأسعار المحوّلة)
 Route::get('/exchange-rate', [ExchangeRateController::class, 'show']);
+
+/*
+| إعدادات الدفع العامة (رابط/QR محفظة شام كاش) - يستخدمها الفرونت في
+| صفحة الدفع لعرضها للزبون كبديل يدوي عن فتح التطبيق مباشرة.
+*/
+Route::get('/payment-settings', [PaymentController::class, 'settings']);
+
+/*
+| Webhook شام كاش - عام (يستدعيه سيرفر شام كاش نفسه بعد الدفع، وليس
+| المستخدم، لذلك لا نضعه خلف auth:sanctum). التحقق الفعلي من صحة
+| الطلب يتم داخل PaymentController::shamCashWebhook عبر استدعاء
+| /verify على سيرفر شام كاش نفسه.
+*/
+Route::post('/webhooks/shamcash', [PaymentController::class, 'shamCashWebhook']);
 
 //جلب my cart_id
 // routes/api.php
@@ -102,11 +117,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/admin/orders', [OrderController::class, 'getOrdersToAdmin']);
     Route::put('/orders/{id}/status', [OrderController::class, 'updateOrder']);
 
-
     /*
     | Order Items
     */
     Route::get('order-items/order/{orderId}', [OrderItemController::class, 'getItemsByOrder']);
+
+    /*
+    | Payments (ShamCash)
+    */
+    Route::post('/payments/shamcash/create', [PaymentController::class, 'createShamCashInvoice']);
+    Route::get('/payments/{orderId}/status', [PaymentController::class, 'checkOrderStatus']);
 
     /*
     | Reviews
@@ -169,6 +189,11 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     */
     Route::post('/exchange-rate', [ExchangeRateController::class, 'update']);
     Route::get('/exchange-rate/history', [ExchangeRateController::class, 'history']);
+
+    /*
+    | Payment settings - رفع صورة QR + عنوان محفظة شام كاش
+    */
+    Route::post('/admin/payment-settings/shamcash', [PaymentController::class, 'updateShamCashSettings']);
 });
 Route::get('/run-link', function () {
     \Illuminate\Support\Facades\Artisan::call('storage:link');

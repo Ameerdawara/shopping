@@ -27,6 +27,12 @@ return [
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
+    'shamcash' => [
+    'base_url'       => env('SHAMCASH_BASE_URL', 'https://api-shamcash.com/api'),
+    'api_key'        => env('SHAMCASH_API_KEY'),
+    'wallet_address' => env('SHAMCASH_WALLET_ADDRESS'),
+    'webhook_secret' => env('SHAMCASH_WEBHOOK_SECRET'),
+],
 
     'slack' => [
         'notifications' => [

@@ -6,7 +6,26 @@ use Illuminate\Database\Eloquent\Model;
 
 class Payment extends Model
 {
-    public function order(){
+    protected $fillable = [
+        'order_id',
+        'method',
+        'invoice_number',
+        'amount',
+        'currency',
+        'transaction_ref',
+        'counterparty',
+        'status',
+        'paid_at',
+        'raw_payload',
+    ];
+
+    protected $casts = [
+        'raw_payload' => 'array',
+        'paid_at'     => 'datetime',
+    ];
+
+    public function order()
+    {
         return $this->belongsTo(Order::class);
     }
 }
