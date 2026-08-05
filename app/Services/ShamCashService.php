@@ -59,8 +59,18 @@ class ShamCashService
             $payload['expiresInMinutes'] = $expiresInMinutes;
         }
 
-        $response = Http::withHeaders($this->headers())
-            ->post("{$this->baseUrl}/v1/invoices", $payload);
+        // مهلة أقصر (بدل الافتراضي 30 ثانية) + إعادة محاولة تلقائية عند مشاكل
+// الاتصال فقط - لأن الاستضافة الحالية عندها انقطاع متقطع في الاتصالات
+// الصادرة (نفس الطلب نجح أحياناً وتعلّق أحياناً أخرى دون تغيير بالبيانات)
+$response = Http::withHeaders($this->headers())
+    ->timeout(10)
+    ->connectTimeout(5)
+    ->retry(2, 300, function ($exception) {
+        // أعد المحاولة فقط عند مشاكل شبكة/اتصال، وليس عند أخطاء منطقية
+        // من شام كاش نفسه (401/422...) لأنها لن تتغير بالإعادة
+        return $exception instanceof \Illuminate\Http\Client\ConnectionException;
+    })
+    ->post("{$this->baseUrl}/v1/invoices", $payload);
 
         if (! $response->successful()) {
             Log::error('ShamCash: فشل إنشاء الفاتورة', [
