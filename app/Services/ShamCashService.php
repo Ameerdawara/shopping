@@ -48,23 +48,21 @@ class ShamCashService
     {
         $webhookUrl = $webhookUrl ?: url('/api/webhooks/shamcash');
 
-        // المحاولة الأولى: amount كرقم (number) كما يذكر التوثيق الرسمي حرفياً.
-        $payload  = $this->buildInvoicePayload($amount, $currency, $walletAddress, $metadata, $webhookUrl, $expiresInMinutes, asString: false);
+        // ✅ مؤكّد من لوغ الإنتاج: شام كاش يرفض amount كرقم دائماً برسالة
+        // "Expected string, received number" (بعكس ما يذكره التوثيق).
+        // نبعت string كمحاولة أولى وسريعة (بدون استدعاء إضافي غير ضروري
+        // بكل مرة)، ونحتفظ بمحاولة number كـ fallback فقط تحسّباً لو غيّر
+        // شام كاش سلوك الـ API مستقبلاً ليطابق توثيقه الرسمي.
+        $payload  = $this->buildInvoicePayload($amount, $currency, $walletAddress, $metadata, $webhookUrl, $expiresInMinutes, asString: true);
         $response = $this->postInvoice($payload);
 
-        // ⚠️ سبق ولاحظنا فعلياً (وقت تجربة سابقة) رد خطأ "Expected string,
-        // received number" من نفس الـ API لنفس الحقل amount، بالتناقض مع
-        // التوثيق. بدل ما "نقرر" مسبقاً أي نوع صحيح ونخاطر نكسر الطلبات لو
-        // تغيّر سلوك الـ API، نجرّب أولاً بالشكل الموثّق (number)، وإذا
-        // فشل الطلب تحديداً بسبب amount، نعيد المحاولة مرة واحدة فقط
-        // بإرسالها كنص (string).
         if (! $response->successful() && $this->looksLikeAmountTypeError($response)) {
-            Log::warning('ShamCash: فشل إنشاء الفاتورة بـ amount كرقم، إعادة المحاولة كنص (string)', [
+            Log::warning('ShamCash: فشل إنشاء الفاتورة بـ amount كنص، إعادة المحاولة كرقم (حسب التوثيق الرسمي)', [
                 'status' => $response->status(),
                 'body'   => $response->body(),
             ]);
 
-            $payload  = $this->buildInvoicePayload($amount, $currency, $walletAddress, $metadata, $webhookUrl, $expiresInMinutes, asString: true);
+            $payload  = $this->buildInvoicePayload($amount, $currency, $walletAddress, $metadata, $webhookUrl, $expiresInMinutes, asString: false);
             $response = $this->postInvoice($payload);
         }
 
@@ -115,16 +113,22 @@ class ShamCashService
     }
 
     /**
-     * فحص بسيط: هل رسالة الخطأ الراجعة من شام كاش تتكلم تحديداً عن نوع
-     * حقل amount (زودز/فاليديشن مثل "Expected string, received number"
-     * أو العكس)؟ نستخدمه فقط لتقرير هل نعيد محاولة إنشاء الفاتورة بنوع
-     * مختلف لـ amount، وليس لأي خطأ آخر (401/422 لأسباب ثانية...).
+     * فحص: هل رسالة الخطأ الراجعة من شام كاش هي خطأ تضارب نوع بيانات
+     * (زودز/فاليديشن) قد يكون سببه amount تحديداً؟
+     *
+     * ⚠️ مؤكّد من رد فعلي حقيقي (لوغ الإنتاج) أن شام كاش لا يذكر اسم
+     * الحقل إطلاقاً برسالة الخطأ - مثال حرفي:
+     * {"error":"VALIDATION_ERROR","message":"Expected string, received number"}
+     * لذلك لا نشترط وجود كلمة "amount" بالنص (كانت أول نسخة من هذا الفحص
+     * تشترطها خطأً فتفشل المطابقة دائماً). بما أن amount هو الحقل الرقمي
+     * الوحيد اللي نرسله فعلياً بهذا الطلب، مطابقة نمط الرسالة العام كافية
+     * وآمنة هون طالما الخطأ من نوع VALIDATION_ERROR.
      */
     private function looksLikeAmountTypeError(\Illuminate\Http\Client\Response $response): bool
     {
         $body = strtolower((string) $response->body());
 
-        return str_contains($body, 'amount') && (
+        return str_contains($body, 'validation_error') && (
             str_contains($body, 'expected string') ||
             str_contains($body, 'expected number') ||
             str_contains($body, 'invalid_type')
