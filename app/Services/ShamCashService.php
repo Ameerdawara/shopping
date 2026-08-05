@@ -59,18 +59,17 @@ class ShamCashService
             $payload['expiresInMinutes'] = $expiresInMinutes;
         }
 
-        // مهلة أقصر (بدل الافتراضي 30 ثانية) + إعادة محاولة تلقائية عند مشاكل
-// الاتصال فقط - لأن الاستضافة الحالية عندها انقطاع متقطع في الاتصالات
-// الصادرة (نفس الطلب نجح أحياناً وتعلّق أحياناً أخرى دون تغيير بالبيانات)
-$response = Http::withHeaders($this->headers())
-    ->timeout(10)
-    ->connectTimeout(5)
-    ->retry(2, 300, function ($exception) {
-        // أعد المحاولة فقط عند مشاكل شبكة/اتصال، وليس عند أخطاء منطقية
-        // من شام كاش نفسه (401/422...) لأنها لن تتغير بالإعادة
-        return $exception instanceof \Illuminate\Http\Client\ConnectionException;
-    })
-    ->post("{$this->baseUrl}/v1/invoices", $payload);
+        // ⚠️ لا نستخدم retry() هون - POST /v1/invoices عملية غير idempotent
+        // (كل استدعاء ناجح ينشئ فاتورة جديدة). لو الطلب فعلياً وصل ونُفّذ
+        // عند شام كاش لكن الرد ضاع عندنا بسبب انقطاع مؤقت بالاتصال، إعادة
+        // المحاولة تلقائياً كانت رح تنشئ فاتورة ثانية مكررة لنفس الطلب دون
+        // علمنا. نكتفي بمهلة أقصر (بدل الافتراضي 30 ثانية) ونترك التعامل
+        // مع الفشل (استثناء) لـ createShamCashInvoice في الكونترولر، اللي
+        // بيلغي الطلب ويطلب من الزبون يعيد المحاولة يدوياً بدل تكرار تلقائي.
+        $response = Http::withHeaders($this->headers())
+            ->timeout(10)
+            ->connectTimeout(5)
+            ->post("{$this->baseUrl}/v1/invoices", $payload);
 
         if (! $response->successful()) {
             Log::error('ShamCash: فشل إنشاء الفاتورة', [
@@ -91,9 +90,8 @@ $response = Http::withHeaders($this->headers())
      * لا تستخدم قيمة يكتبها الأدمن يدوياً (مثل رقم هاتف) كـ walletAddress -
      * شام كاش يتحقق أنها معرّف محفظة حقيقي (UUID/hex32) عندهم.
      *
-     * TODO: عدّل اسم الحقل ($wallet['walletAddress'] أو $wallet['id'] أو
-     * $wallet['address']) حسب الشكل الفعلي لعنصر المحفظة في الـ response،
-     * لأنه لم يصلني بالضبط - فقط شكل جدول التوثيق.
+     * ✅ الحقل الصحيح مؤكد من رد فعلي هو walletAddress (وليس id/address) -
+     * راجع منطق الاختيار في PaymentController::createShamCashInvoice.
      */
     public function getWallets(): array
     {

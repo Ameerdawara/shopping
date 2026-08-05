@@ -197,6 +197,18 @@ class PaymentController extends Controller
 
         $order->update(['invoice_number' => $invoiceNumber]);
 
+        // 🔎 تحقّق فوري أن invoice_number انحفظ فعلاً بجدول orders. هذا
+        // بالضبط النوع من المشاكل اللي بيسبب لاحقاً "لم يتم إنشاء فاتورة
+        // دفع شام كاش لهذا الطلب" رغم أن الفاتورة أُنشئت فعلياً عند شام
+        // كاش (السبب الأشيع: عمود invoice_number غير مضاف إلى $fillable
+        // في App\Models\Order، فـ update() يتجاهله بصمت من غير أي خطأ).
+        if ($order->fresh()->invoice_number !== $invoiceNumber) {
+            Log::critical('ShamCash: invoice_number لم يُحفظ في جدول orders رغم نجاح إنشاء الفاتورة عند شام كاش - تأكد أن invoice_number موجود ضمن $fillable في App\\Models\\Order', [
+                'order_id'       => $order->id,
+                'invoice_number' => $invoiceNumber,
+            ]);
+        }
+
         // ⚠️ الفاتورة أصبحت موجودة فعلياً عند شام كاش في هذه اللحظة (تم
         // إنشاؤها بنجاح أعلاه). إذا فشل حفظ سجل Payment المحلي لأي سبب
         // (خطأ DB مؤقت مثلاً)، لا نُلغي الطلب ولا نرمي خطأ للمستخدم -
