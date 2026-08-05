@@ -210,12 +210,12 @@ class PaymentController extends Controller
         // تفريغ السلة بعد إنشاء الطلب والفاتورة بنجاح
         $cart->cartItem()->delete();
 
-        return response()->json([
+       return response()->json([
     'order_id'       => $order->id,
     'invoice_number' => $invoiceNumber,
     'amount'         => $amount,
     'currency'       => $data['currency'],
-    'wallet_address' => PaymentSetting::get('shamcash_wallet_address'),
+    'wallet_address' => $walletAddress, // ✅ نفس العنوان الحقيقي المستخدم بإنشاء هذه الفاتورة تحديداً
 ], 201);
     }
 
@@ -277,7 +277,7 @@ class PaymentController extends Controller
     }
 
     try {
-        // ✅ الآن نمرر tran_id فعلياً كما يتطلب التوثيق
+        // ✅ نمرر tran_id فعلياً كما يتطلب التوثيق
         $verified = $this->shamCash->verifyInvoice($invoiceNumber, $transactionRef);
     } catch (\Throwable $e) {
         Log::error('ShamCash webhook: فشل التحقق من الفاتورة', [
@@ -286,6 +286,91 @@ class PaymentController extends Controller
         ]);
         return response()->json(['message' => 'تعذر التحقق'], 502);
     }
+
+    // TODO: تأكد من اسم حقل الحالة الفعلي في رد /verify (افترضنا status)
+    $status = $verified['status'] ?? null;
+
+    if ($status !== 'paid') {
+        return response()->json(['message' => 'الحالة غير مؤكدة كمدفوعة بعد من سيرفر شام كاش']);
+    }
+
+    $order = $payment->order;
+
+    $payment->update([
+        'status'          => 'paid',
+        'transaction_ref' => $verified['transactionRef'] ?? $transactionRef,
+        'counterparty'    => $verified['counterparty'] ?? ($payload['counterparty'] ?? null),
+        'paid_at'         => now(),
+        'raw_payload'     => $verified,
+    ]);
+
+    $order->update([
+        'is_paid'                  => true,
+        'status'                   => 'processing', // = الطلب "مقبول" ودخل قيد التجهيز
+        'shamcash_transaction_ref' => $payment->transaction_ref,
+        'paid_at'                  => now(),
+    ]);
+
+    return response()->json(['message' => 'تم تأكيد الدفع وقبول الطلب بنجاح']);
 }
-    // باقي الكود كما هو (فحص status !== 'paid'، تحديث Payment و Order)...
+
+/**
+ * تأكيد يدوي من الزبون: يُدخل رقم عملية شام كاش (tran_id) الظاهر في تطبيقه
+ * بعد إتمام التحويل (مثال: 368916038 من الإيصال)، ونستدعي /verify فوراً
+ * بدل انتظار الـ webhook فقط - لأن التجربة الفعلية أثبتت أن الفاتورة تبقى
+ * "معلّقة" عند شام كاش لحد ما أحد يستدعي /verify صراحة بهذا الرقم.
+ */
+public function confirmShamCashPayment(Request $request, $orderId)
+{
+    $data = $request->validate([
+        'tran_id' => 'required|string',
+    ]);
+
+    $order = Order::where('id', $orderId)
+        ->where('user_id', Auth::id())
+        ->firstOrFail();
+
+    $payment = Payment::where('order_id', $order->id)->first();
+
+    if (! $payment || empty($order->invoice_number)) {
+        return response()->json(['message' => 'لا توجد فاتورة مرتبطة بهذا الطلب'], 404);
+    }
+
+    if ($order->is_paid) {
+        return response()->json(['message' => 'الطلب مدفوع بالفعل', 'is_paid' => true]);
+    }
+
+    try {
+        $verified = $this->shamCash->verifyInvoice($order->invoice_number, $data['tran_id']);
+    } catch (\Throwable $e) {
+        Log::error('ShamCash: فشل التحقق اليدوي من الفاتورة', [
+            'order_id' => $order->id,
+            'error'    => $e->getMessage(),
+        ]);
+        return response()->json(['message' => 'تعذر التحقق من رقم العملية، تأكد أنه صحيح وحاول مرة أخرى'], 502);
+    }
+
+    $status = $verified['status'] ?? null;
+
+    if ($status !== 'paid') {
+        return response()->json(['message' => 'لم يتم تأكيد الدفع بعد، تحقق من رقم العملية'], 422);
+    }
+
+    $payment->update([
+        'status'          => 'paid',
+        'transaction_ref' => $verified['transactionRef'] ?? $data['tran_id'],
+        'counterparty'    => $verified['counterparty'] ?? null,
+        'paid_at'         => now(),
+        'raw_payload'     => $verified,
+    ]);
+
+    $order->update([
+        'is_paid'                  => true,
+        'status'                   => 'processing',
+        'shamcash_transaction_ref' => $payment->transaction_ref,
+        'paid_at'                  => now(),
+    ]);
+
+    return response()->json(['message' => 'تم تأكيد الدفع وقبول الطلب بنجاح', 'is_paid' => true]);
+}
 }
