@@ -27,49 +27,46 @@ class ShamCashService
     /**
      * إنشاء فاتورة دفع جديدة في شام كاش.
      *
-     * ✅ الحقول أدناه مطابقة لتوثيق /v1/invoices الفعلي (لقطة الشاشة "إنشاء
-     * فاتورة"): amount, currency, walletAddress, webhookUrl, expiresInMinutes,
-     * metadata. لا يوجد حقل invoiceNumber في التوثيق - شام كاش هو من يولّد
-     * invoiceId ويرجعه في الـ response، نحن لا نرسله. أي رقم/مرجع خاص فينا
-     * (order id) نمرره داخل metadata فقط للتتبّع.
+     * ✅ الحقول أدناه مطابقة لتوثيق /v1/invoices الرسمي (صفحة "إنشاء فاتورة"
+     * بلوحة تحكم شام كاش): amount (number), currency (SYP|USD|EUR),
+     * walletAddress (مطلوب), webhookUrl (اختياري), expiresInMinutes
+     * (اختياري)، metadata (اختياري - object). الرد يحتوي invoiceId الذي
+     * يُستخدم لاحقاً بالتحقق (verify) والـ webhook.
      *
      * ⚠️ walletAddress هون لازم يكون معرّف محفظتنا نحن عند شام كاش (UUID أو
      * hex32 - راجع getWallets())، وليس رقم هاتف أو نص حر يدخله الأدمن.
      * إرسال قيمة غير موجودة فعلياً عند شام كاش هو سبب خطأ
      * "NOT_FOUND: المحفظة غير موجودة".
+     *
+     * ⚠️ webhookUrl: لو ما انبعت، شام كاش ما رح يقدر يبلّغنا تلقائياً لما
+     * يصير الدفع (يعني الـ webhook عندنا بـ PaymentController ما رح
+     * يُستدعى أبداً، والاعتماد بيصير كلياً على التأكيد اليدوي من الزبون).
+     * لذلك إذا الكونترولر ما مرّر webhookUrl صراحة، نستخدم رابط الـ webhook
+     * الفعلي عندنا تلقائياً بدل ما نتركه فاضي.
      */
     public function createInvoice(float $amount, string $currency, string $walletAddress, array $metadata = [], ?string $webhookUrl = null, ?int $expiresInMinutes = null): array
     {
-        $payload = [
-            // ⚠️ API شام كاش يتوقع amount كنص (string) وليس رقم،
-            // حسب رسالة الخطأ الفعلية "Expected string, received number"
-            // (رغم أن التوثيق المعروض يذكرها كـ number - اعتمدنا سلوك الـ API الفعلي)
-            'amount'        => (string) $amount,
-            'currency'      => $currency,
-            'walletAddress' => $walletAddress,
-        ];
+        $webhookUrl = $webhookUrl ?: url('/api/webhooks/shamcash');
 
-        if (! empty($metadata)) {
-            $payload['metadata'] = $metadata;
-        }
-        if ($webhookUrl) {
-            $payload['webhookUrl'] = $webhookUrl;
-        }
-        if ($expiresInMinutes) {
-            $payload['expiresInMinutes'] = $expiresInMinutes;
-        }
+        // المحاولة الأولى: amount كرقم (number) كما يذكر التوثيق الرسمي حرفياً.
+        $payload  = $this->buildInvoicePayload($amount, $currency, $walletAddress, $metadata, $webhookUrl, $expiresInMinutes, asString: false);
+        $response = $this->postInvoice($payload);
 
-        // ⚠️ لا نستخدم retry() هون - POST /v1/invoices عملية غير idempotent
-        // (كل استدعاء ناجح ينشئ فاتورة جديدة). لو الطلب فعلياً وصل ونُفّذ
-        // عند شام كاش لكن الرد ضاع عندنا بسبب انقطاع مؤقت بالاتصال، إعادة
-        // المحاولة تلقائياً كانت رح تنشئ فاتورة ثانية مكررة لنفس الطلب دون
-        // علمنا. نكتفي بمهلة أقصر (بدل الافتراضي 30 ثانية) ونترك التعامل
-        // مع الفشل (استثناء) لـ createShamCashInvoice في الكونترولر، اللي
-        // بيلغي الطلب ويطلب من الزبون يعيد المحاولة يدوياً بدل تكرار تلقائي.
-        $response = Http::withHeaders($this->headers())
-            ->timeout(10)
-            ->connectTimeout(5)
-            ->post("{$this->baseUrl}/v1/invoices", $payload);
+        // ⚠️ سبق ولاحظنا فعلياً (وقت تجربة سابقة) رد خطأ "Expected string,
+        // received number" من نفس الـ API لنفس الحقل amount، بالتناقض مع
+        // التوثيق. بدل ما "نقرر" مسبقاً أي نوع صحيح ونخاطر نكسر الطلبات لو
+        // تغيّر سلوك الـ API، نجرّب أولاً بالشكل الموثّق (number)، وإذا
+        // فشل الطلب تحديداً بسبب amount، نعيد المحاولة مرة واحدة فقط
+        // بإرسالها كنص (string).
+        if (! $response->successful() && $this->looksLikeAmountTypeError($response)) {
+            Log::warning('ShamCash: فشل إنشاء الفاتورة بـ amount كرقم، إعادة المحاولة كنص (string)', [
+                'status' => $response->status(),
+                'body'   => $response->body(),
+            ]);
+
+            $payload  = $this->buildInvoicePayload($amount, $currency, $walletAddress, $metadata, $webhookUrl, $expiresInMinutes, asString: true);
+            $response = $this->postInvoice($payload);
+        }
 
         if (! $response->successful()) {
             Log::error('ShamCash: فشل إنشاء الفاتورة', [
@@ -81,6 +78,57 @@ class ShamCashService
         }
 
         return $response->json();
+    }
+
+    private function buildInvoicePayload(float $amount, string $currency, string $walletAddress, array $metadata, string $webhookUrl, ?int $expiresInMinutes, bool $asString): array
+    {
+        $payload = [
+            'amount'        => $asString ? (string) $amount : $amount,
+            'currency'      => $currency,
+            'walletAddress' => $walletAddress,
+            'webhookUrl'    => $webhookUrl,
+        ];
+
+        if (! empty($metadata)) {
+            $payload['metadata'] = $metadata;
+        }
+        if ($expiresInMinutes) {
+            $payload['expiresInMinutes'] = $expiresInMinutes;
+        }
+
+        return $payload;
+    }
+
+    private function postInvoice(array $payload): \Illuminate\Http\Client\Response
+    {
+        // ⚠️ لا نستخدم retry() هون - POST /v1/invoices عملية غير idempotent
+        // (كل استدعاء ناجح ينشئ فاتورة جديدة). لو الطلب فعلياً وصل ونُفّذ
+        // عند شام كاش لكن الرد ضاع عندنا بسبب انقطاع مؤقت بالاتصال، إعادة
+        // المحاولة تلقائياً كانت رح تنشئ فاتورة ثانية مكررة لنفس الطلب دون
+        // علمنا. نكتفي بمهلة أقصر (بدل الافتراضي 30 ثانية) ونترك التعامل
+        // مع الفشل (استثناء) لـ createShamCashInvoice في الكونترولر، اللي
+        // بيلغي الطلب ويطلب من الزبون يعيد المحاولة يدوياً بدل تكرار تلقائي.
+        return Http::withHeaders($this->headers())
+            ->timeout(10)
+            ->connectTimeout(5)
+            ->post("{$this->baseUrl}/v1/invoices", $payload);
+    }
+
+    /**
+     * فحص بسيط: هل رسالة الخطأ الراجعة من شام كاش تتكلم تحديداً عن نوع
+     * حقل amount (زودز/فاليديشن مثل "Expected string, received number"
+     * أو العكس)؟ نستخدمه فقط لتقرير هل نعيد محاولة إنشاء الفاتورة بنوع
+     * مختلف لـ amount، وليس لأي خطأ آخر (401/422 لأسباب ثانية...).
+     */
+    private function looksLikeAmountTypeError(\Illuminate\Http\Client\Response $response): bool
+    {
+        $body = strtolower((string) $response->body());
+
+        return str_contains($body, 'amount') && (
+            str_contains($body, 'expected string') ||
+            str_contains($body, 'expected number') ||
+            str_contains($body, 'invalid_type')
+        );
     }
 
     /**
