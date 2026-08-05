@@ -197,15 +197,30 @@ class PaymentController extends Controller
 
         $order->update(['invoice_number' => $invoiceNumber]);
 
-        Payment::create([
-            'order_id'       => $order->id,
-            'method'         => 'shamcash',
-            'invoice_number' => $invoiceNumber,
-            'amount'         => $amount,
-            'currency'       => $data['currency'],
-            'status'         => 'pending',
-            'raw_payload'    => $invoiceResponse,
-        ]);
+        // ⚠️ الفاتورة أصبحت موجودة فعلياً عند شام كاش في هذه اللحظة (تم
+        // إنشاؤها بنجاح أعلاه). إذا فشل حفظ سجل Payment المحلي لأي سبب
+        // (خطأ DB مؤقت مثلاً)، لا نُلغي الطلب ولا نرمي خطأ للمستخدم -
+        // لأن ذلك كان سبب ظهور طلبات عندها invoice_number لكن بدون سجل
+        // Payment محلي، فيفشل التأكيد لاحقاً برسالة "لا توجد فاتورة مرتبطة
+        // بهذا الطلب" رغم أن الفاتورة موجودة فعلاً. confirmShamCashPayment
+        // تحت رح "يشفي" الحالة تلقائياً (firstOrCreate) عند أول محاولة تأكيد.
+        try {
+            Payment::create([
+                'order_id'       => $order->id,
+                'method'         => 'shamcash',
+                'invoice_number' => $invoiceNumber,
+                'amount'         => $amount,
+                'currency'       => $data['currency'],
+                'status'         => 'pending',
+                'raw_payload'    => $invoiceResponse,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('ShamCash: فشل حفظ سجل الدفع محلياً بعد إنشاء الفاتورة عند شام كاش (سيتم إنشاؤه لاحقاً عند التأكيد)', [
+                'order_id'       => $order->id,
+                'invoice_number' => $invoiceNumber,
+                'error'          => $e->getMessage(),
+            ]);
+        }
 
         // تفريغ السلة بعد إنشاء الطلب والفاتورة بنجاح
         $cart->cartItem()->delete();
@@ -330,15 +345,35 @@ public function confirmShamCashPayment(Request $request, $orderId)
         ->where('user_id', Auth::id())
         ->firstOrFail();
 
-    $payment = Payment::where('order_id', $order->id)->first();
-
-    if (! $payment || empty($order->invoice_number)) {
-        return response()->json(['message' => 'لا توجد فاتورة مرتبطة بهذا الطلب'], 404);
+    // ✅ المصدر الحقيقي لوجود فاتورة هو order.invoice_number (هو نفسه
+    // القيمة التي رجعها شام كاش عند الإنشاء). سابقاً كنا نرفض التأكيد
+    // إذا ما في سجل Payment محلي حتى لو كانت الفاتورة موجودة فعلاً عند
+    // شام كاش - وهذا كان سبب خطأ "لا توجد فاتورة مرتبطة بهذا الطلب" رغم
+    // أن الطلب أُنشئ فعلياً عبر تدفّق شام كاش (مثلاً بسبب فشل مؤقت أثناء
+    // حفظ Payment وقت الإنشاء). لذلك:
+    // 1) إذا ما في invoice_number على الطلب أصلاً -> فعلاً لا توجد فاتورة.
+    // 2) إذا في invoice_number لكن ما في سجل Payment محلي -> ننشئه الآن
+    //    (firstOrCreate) بدل رفض التأكيد.
+    if (empty($order->invoice_number)) {
+        return response()->json([
+            'message' => 'لم يتم إنشاء فاتورة دفع شام كاش لهذا الطلب بعد',
+        ], 422);
     }
 
     if ($order->is_paid) {
         return response()->json(['message' => 'الطلب مدفوع بالفعل', 'is_paid' => true]);
     }
+
+    $payment = Payment::firstOrCreate(
+        ['order_id' => $order->id],
+        [
+            'method'         => 'shamcash',
+            'invoice_number' => $order->invoice_number,
+            'amount'         => $order->total_price,
+            'currency'       => $order->currency,
+            'status'         => 'pending',
+        ]
+    );
 
     try {
         $verified = $this->shamCash->verifyInvoice($order->invoice_number, $data['tran_id']);
