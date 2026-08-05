@@ -213,7 +213,10 @@ class PaymentController extends Controller
             'currency'       => $data['currency'],
             // TODO: إذا رجّع API حقل جاهز (paymentUrl/checkoutUrl) استخدمه
             // بدل buildDeepLink، هو الأدق والأضمن لفتح التطبيق فعلياً.
-            'deep_link'      => $invoiceResponse['paymentUrl'] ?? $this->shamCash->buildDeepLink($invoiceNumber),
+            'deep_link' => $invoiceResponse['paymentUrl']
+                ?? $invoiceResponse['checkoutUrl']
+                ?? $invoiceResponse['deepLink']
+                ?? $this->shamCash->buildDeepLink($invoiceNumber),
             'wallet_address' => PaymentSetting::get('shamcash_wallet_address'),
         ], 201);
     }
