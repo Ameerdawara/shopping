@@ -38,28 +38,27 @@ class PaymentController extends Controller
      * (USDT لم تُضَف هون بناءً على طلبك، رح نضيفها لاحقاً)
      */
     public function updateShamCashSettings(Request $request)
-    {
-        $data = $request->validate([
-            'wallet_address' => 'required|string',
-            'qr_image'       => 'nullable|image|max:4096',
-        ]);
+{
+    $data = $request->validate([
+        'wallet_address' => 'required|string',
+        'qr_image'       => 'nullable|image|max:4096',
+    ]);
 
-        PaymentSetting::set('shamcash_wallet_address', $data['wallet_address']);
+    PaymentSetting::set('shamcash_wallet_address', $data['wallet_address']);
 
-        if ($request->hasFile('qr_image')) {
-            $path = $request->file('qr_image')->store('qr', 'public');
-            PaymentSetting::set('shamcash_qr_url', Storage::url($path));
-        }
-
-        return response()->json([
-            'message' => 'تم تحديث إعدادات شام كاش بنجاح',
-            'data'    => [
-                'qr_url'         => PaymentSetting::get('shamcash_qr_url'),
-                'wallet_address' => PaymentSetting::get('shamcash_wallet_address'),
-            ],
-        ]);
+    if ($request->hasFile('qr_image')) {
+        $path = $request->file('qr_image')->store('qr', 'public'); // storage/app/public/qr
+        PaymentSetting::set('shamcash_qr_url', Storage::url($path));
     }
 
+    return response()->json([
+        'message' => 'تم تحديث إعدادات شام كاش بنجاح',
+        'data'    => [
+            'qr_url'         => PaymentSetting::get('shamcash_qr_url'),
+            'wallet_address' => PaymentSetting::get('shamcash_wallet_address'),
+        ],
+    ]);
+}
     /**
      * إنشاء طلب جديد + فاتورة دفع عبر شام كاش.
      *
@@ -99,15 +98,34 @@ class PaymentController extends Controller
             ? round($totalSyp / max($rate, 0.0001), 2)
             : round($totalSyp, 2);
 
-        // عنوان المحفظة يُقرأ من إعدادات لوحة التحكم (يحدّثها المدير من
-        // صفحة payImages.html) وليس من .env، حتى يقدر المدير يغيّره من
-        // الواجهة مباشرة بدون الحاجة للوصول للسيرفر.
-        $walletAddress = PaymentSetting::get('shamcash_wallet_address')
-            ?? config('services.shamcash.wallet_address');
+        // ⚠️ عنوان المحفظة المُستخدم فعلياً مع POST /v1/invoices لازم يكون
+        // معرّف محفظتنا الحقيقي عند شام كاش (UUID/hex32)، وليس القيمة التي
+        // يكتبها المدير يدوياً في payImages.html (رقم هاتف). القيمة اليدوية
+        // كانت سبب خطأ "NOT_FOUND: المحفظة غير موجودة" في اللوغ. لذلك نجلب
+        // محفظتنا الحقيقية مباشرة من شام كاش عبر GET /v1/wallets.
+        try {
+            $wallets = $this->shamCash->getWallets();
+        } catch (\Throwable $e) {
+            Log::error('ShamCash: تعذر جلب المحفظة قبل إنشاء الفاتورة', ['error' => $e->getMessage()]);
+            return response()->json([
+                'message' => 'تعذر الاتصال بشام كاش حالياً، حاول لاحقاً',
+            ], 502);
+        }
+
+        // TODO: عدّل حسب شكل الـ response الفعلي (قد تكون قائمة مباشرة أو
+        // تحت مفتاح 'data'/'wallets'، وحقل العنوان قد يكون walletAddress
+        // أو address أو id).
+        $walletList = $wallets['data'] ?? $wallets['wallets'] ?? $wallets;
+        $firstWallet = is_array($walletList) ? ($walletList[0] ?? null) : null;
+        $walletAddress = $firstWallet['walletAddress']
+            ?? $firstWallet['address']
+            ?? $firstWallet['id']
+            ?? null;
 
         if (empty($walletAddress)) {
+            Log::error('ShamCash: لم يتم العثور على محفظة صالحة', ['response' => $wallets]);
             return response()->json([
-                'message' => 'لم يتم ضبط عنوان محفظة شام كاش بعد، الرجاء التواصل مع الإدارة',
+                'message' => 'لم يتم العثور على محفظة شام كاش صالحة، الرجاء التواصل مع الإدارة',
             ], 422);
         }
 
@@ -137,21 +155,34 @@ class PaymentController extends Controller
             $order->orderItem()->create($orderItemData);
         }
 
-        $invoiceNumber = 'INV-' . now()->format('Ymd') . '-' . str_pad((string) $order->id, 6, '0', STR_PAD_LEFT);
-
         try {
             $invoiceResponse = $this->shamCash->createInvoice(
-                $invoiceNumber,
                 $amount,
                 $data['currency'],
                 $walletAddress,
-                "طلب رقم {$order->id}"
+                ['order_id' => $order->id, 'description' => "طلب رقم {$order->id}"]
             );
         } catch (\Throwable $e) {
             Log::error('ShamCash invoice creation failed', [
                 'order_id' => $order->id,
                 'error'    => $e->getMessage(),
             ]);
+            $order->update(['status' => 'cancelled']);
+
+            return response()->json(['message' => 'تعذر إنشاء فاتورة الدفع، حاول مرة أخرى'], 502);
+        }
+
+        // ✅ invoiceNumber/invoiceId يجب أن يكون القيمة التي يرجعها شام كاش،
+        // وليس قيمة نولّدها نحن - غير هيك الـ webhook والتحقق (verify) لاحقاً
+        // ما رح يلاقوا الفاتورة عند شام كاش. عدّل اسم الحقل حسب الـ response
+        // الفعلي (invoiceId شائع أكثر من invoiceNumber حسب توثيقك).
+        $invoiceNumber = $invoiceResponse['invoiceId']
+            ?? $invoiceResponse['invoiceNumber']
+            ?? $invoiceResponse['id']
+            ?? null;
+
+        if (empty($invoiceNumber)) {
+            Log::error('ShamCash: الاستجابة لا تحتوي على معرّف فاتورة', ['response' => $invoiceResponse]);
             $order->update(['status' => 'cancelled']);
 
             return response()->json(['message' => 'تعذر إنشاء فاتورة الدفع، حاول مرة أخرى'], 502);

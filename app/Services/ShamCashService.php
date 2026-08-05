@@ -27,32 +27,75 @@ class ShamCashService
     /**
      * إنشاء فاتورة دفع جديدة في شام كاش.
      *
-     * ⚠️ لم يصلني الشكل الدقيق لجسم الطلب (request body) ولا للـ response
-     * الخاص بـ POST /v1/invoices من توثيقك الكامل. الحقول أدناه افتراض
-     * منطقي بناءً على أسماء الحقول الظاهرة في مثال الـ webhook
-     * (invoiceNumber, amount, currency...). راجع توثيقك وعدّل فقط
-     * الأسطر المعلّمة TODO إذا كانت الأسماء مختلفة.
+     * ✅ الحقول أدناه مطابقة لتوثيق /v1/invoices الفعلي (لقطة الشاشة "إنشاء
+     * فاتورة"): amount, currency, walletAddress, webhookUrl, expiresInMinutes,
+     * metadata. لا يوجد حقل invoiceNumber في التوثيق - شام كاش هو من يولّد
+     * invoiceId ويرجعه في الـ response، نحن لا نرسله. أي رقم/مرجع خاص فينا
+     * (order id) نمرره داخل metadata فقط للتتبّع.
+     *
+     * ⚠️ walletAddress هون لازم يكون معرّف محفظتنا نحن عند شام كاش (UUID أو
+     * hex32 - راجع getWallets())، وليس رقم هاتف أو نص حر يدخله الأدمن.
+     * إرسال قيمة غير موجودة فعلياً عند شام كاش هو سبب خطأ
+     * "NOT_FOUND: المحفظة غير موجودة".
      */
-    public function createInvoice(string $invoiceNumber, float $amount, string $currency, string $walletAddress, string $description = ''): array
+    public function createInvoice(float $amount, string $currency, string $walletAddress, array $metadata = [], ?string $webhookUrl = null, ?int $expiresInMinutes = null): array
     {
+        $payload = [
+            // ⚠️ API شام كاش يتوقع amount كنص (string) وليس رقم،
+            // حسب رسالة الخطأ الفعلية "Expected string, received number"
+            // (رغم أن التوثيق المعروض يذكرها كـ number - اعتمدنا سلوك الـ API الفعلي)
+            'amount'        => (string) $amount,
+            'currency'      => $currency,
+            'walletAddress' => $walletAddress,
+        ];
+
+        if (! empty($metadata)) {
+            $payload['metadata'] = $metadata;
+        }
+        if ($webhookUrl) {
+            $payload['webhookUrl'] = $webhookUrl;
+        }
+        if ($expiresInMinutes) {
+            $payload['expiresInMinutes'] = $expiresInMinutes;
+        }
+
         $response = Http::withHeaders($this->headers())
-            ->post("{$this->baseUrl}/v1/invoices", [
-                // TODO: تأكد من أسماء هذه الحقول حسب التوثيق الرسمي عندك
-                'invoiceNumber' => $invoiceNumber,
-                // ⚠️ API شام كاش يتوقع amount كنص (string) وليس رقم،
-                // حسب رسالة الخطأ الفعلية "Expected string, received number"
-                'amount'        => (string) $amount,
-                'currency'      => $currency,
-                'description'   => $description,
-                'walletAddress' => $walletAddress,
-            ]);
+            ->post("{$this->baseUrl}/v1/invoices", $payload);
 
         if (! $response->successful()) {
             Log::error('ShamCash: فشل إنشاء الفاتورة', [
+                'status'  => $response->status(),
+                'body'    => $response->body(),
+                'payload' => $payload,
+            ]);
+            throw new \RuntimeException('تعذر إنشاء فاتورة الدفع عبر شام كاش');
+        }
+
+        return $response->json();
+    }
+
+    /**
+     * جلب محافظنا المسجّلة عند شام كاش (GET /v1/wallets).
+     *
+     * هاد هو المصدر الصحيح لقيمة walletAddress المستخدمة في createInvoice.
+     * لا تستخدم قيمة يكتبها الأدمن يدوياً (مثل رقم هاتف) كـ walletAddress -
+     * شام كاش يتحقق أنها معرّف محفظة حقيقي (UUID/hex32) عندهم.
+     *
+     * TODO: عدّل اسم الحقل ($wallet['walletAddress'] أو $wallet['id'] أو
+     * $wallet['address']) حسب الشكل الفعلي لعنصر المحفظة في الـ response،
+     * لأنه لم يصلني بالضبط - فقط شكل جدول التوثيق.
+     */
+    public function getWallets(): array
+    {
+        $response = Http::withHeaders($this->headers())
+            ->get("{$this->baseUrl}/v1/wallets");
+
+        if (! $response->successful()) {
+            Log::error('ShamCash: فشل جلب المحافظ', [
                 'status' => $response->status(),
                 'body'   => $response->body(),
             ]);
-            throw new \RuntimeException('تعذر إنشاء فاتورة الدفع عبر شام كاش');
+            throw new \RuntimeException('تعذر جلب محافظ شام كاش');
         }
 
         return $response->json();
