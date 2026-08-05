@@ -113,19 +113,22 @@ class PaymentController extends Controller
         }
 
         // TODO: عدّل حسب شكل الـ response الفعلي (قد تكون قائمة مباشرة أو
-        // تحت مفتاح 'data'/'wallets'، وحقل العنوان قد يكون walletAddress
-        // أو address أو id).
+        // تحت مفتاح 'data'/'wallets').
         $walletList = $wallets['data'] ?? $wallets['wallets'] ?? $wallets;
-        $firstWallet = is_array($walletList) ? ($walletList[0] ?? null) : null;
-        $walletAddress = $firstWallet['walletAddress']
-            ?? $firstWallet['address']
-            ?? $firstWallet['id']
-            ?? null;
+
+        // ✅ مؤكد من رد فعلي: الحقل الصحيح هو walletAddress، وليس id.
+        // لازم نختار محفظة status = active وعندها walletAddress فعلي،
+        // مش أول عنصر بالقائمة (ممكن يكون "pending" وwalletAddress = null).
+        $activeWallet = collect($walletList)->first(function ($w) {
+            return ($w['status'] ?? null) === 'active' && ! empty($w['walletAddress']);
+        });
+
+        $walletAddress = $activeWallet['walletAddress'] ?? null;
 
         if (empty($walletAddress)) {
-            Log::error('ShamCash: لم يتم العثور على محفظة صالحة', ['response' => $wallets]);
+            Log::error('ShamCash: لم يتم العثور على محفظة نشطة صالحة', ['response' => $wallets]);
             return response()->json([
-                'message' => 'لم يتم العثور على محفظة شام كاش صالحة، الرجاء التواصل مع الإدارة',
+                'message' => 'لا توجد محفظة شام كاش نشطة حالياً، الرجاء التواصل مع الإدارة',
             ], 422);
         }
 
