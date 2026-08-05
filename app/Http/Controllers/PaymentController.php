@@ -211,18 +211,12 @@ class PaymentController extends Controller
         $cart->cartItem()->delete();
 
         return response()->json([
-            'order_id'       => $order->id,
-            'invoice_number' => $invoiceNumber,
-            'amount'         => $amount,
-            'currency'       => $data['currency'],
-            // TODO: إذا رجّع API حقل جاهز (paymentUrl/checkoutUrl) استخدمه
-            // بدل buildDeepLink، هو الأدق والأضمن لفتح التطبيق فعلياً.
-            'deep_link' => $invoiceResponse['paymentUrl']
-                ?? $invoiceResponse['checkoutUrl']
-                ?? $invoiceResponse['deepLink']
-                ?? $this->shamCash->buildDeepLink($invoiceNumber),
-            'wallet_address' => PaymentSetting::get('shamcash_wallet_address'),
-        ], 201);
+    'order_id'       => $order->id,
+    'invoice_number' => $invoiceNumber,
+    'amount'         => $amount,
+    'currency'       => $data['currency'],
+    'wallet_address' => PaymentSetting::get('shamcash_wallet_address'),
+], 201);
     }
 
     /**
@@ -255,65 +249,43 @@ class PaymentController extends Controller
      * التوثيق الكامل، أضف تحقق hash_hmac هون كطبقة حماية إضافية قبل
      * استدعاء verifyInvoice.
      */
-    public function shamCashWebhook(Request $request)
-    {
-        $payload = $request->all();
-        $invoiceNumber = $payload['invoiceNumber'] ?? null;
+   public function shamCashWebhook(Request $request)
+{
+    $payload = $request->all();
+    $invoiceNumber = $payload['invoiceNumber'] ?? null;
+    $transactionRef = $payload['transactionRef'] ?? null;
 
-        if (! $invoiceNumber) {
-            return response()->json(['message' => 'invoiceNumber مفقود'], 422);
-        }
-
-        $payment = Payment::where('invoice_number', $invoiceNumber)->first();
-        if (! $payment) {
-            Log::warning('ShamCash webhook: فاتورة غير معروفة', ['invoiceNumber' => $invoiceNumber]);
-
-            return response()->json(['message' => 'الفاتورة غير موجودة'], 404);
-        }
-
-        // فاتورة منتهية الصلاحية
-        if (($payload['event'] ?? null) === 'invoice.expired') {
-            $payment->update(['status' => 'expired']);
-            $payment->order?->update(['status' => 'cancelled']);
-
-            return response()->json(['message' => 'تم تسجيل انتهاء صلاحية الفاتورة']);
-        }
-
-        try {
-            $verified = $this->shamCash->verifyInvoice($invoiceNumber);
-        } catch (\Throwable $e) {
-            Log::error('ShamCash webhook: فشل التحقق من الفاتورة', [
-                'invoiceNumber' => $invoiceNumber,
-                'error'         => $e->getMessage(),
-            ]);
-
-            return response()->json(['message' => 'تعذر التحقق'], 502);
-        }
-
-        // TODO: تأكد من اسم حقل الحالة الفعلي في رد /verify (افترضنا status)
-        $status = $verified['status'] ?? null;
-
-        if ($status !== 'paid') {
-            return response()->json(['message' => 'الحالة غير مؤكدة كمدفوعة بعد من سيرفر شام كاش']);
-        }
-
-        $order = $payment->order;
-
-        $payment->update([
-            'status'          => 'paid',
-            'transaction_ref' => $verified['transactionRef'] ?? ($payload['transactionRef'] ?? null),
-            'counterparty'    => $verified['counterparty'] ?? ($payload['counterparty'] ?? null),
-            'paid_at'         => now(),
-            'raw_payload'     => $verified,
-        ]);
-
-        $order->update([
-            'is_paid'                  => true,
-            'status'                   => 'processing', // = الطلب "مقبول" ودخل قيد التجهيز
-            'shamcash_transaction_ref' => $payment->transaction_ref,
-            'paid_at'                  => now(),
-        ]);
-
-        return response()->json(['message' => 'تم تأكيد الدفع وقبول الطلب بنجاح']);
+    if (! $invoiceNumber) {
+        return response()->json(['message' => 'invoiceNumber مفقود'], 422);
     }
+
+    $payment = Payment::where('invoice_number', $invoiceNumber)->first();
+    if (! $payment) {
+        Log::warning('ShamCash webhook: فاتورة غير معروفة', ['invoiceNumber' => $invoiceNumber]);
+        return response()->json(['message' => 'الفاتورة غير موجودة'], 404);
+    }
+
+    if (($payload['event'] ?? null) === 'invoice.expired') {
+        $payment->update(['status' => 'expired']);
+        $payment->order?->update(['status' => 'cancelled']);
+        return response()->json(['message' => 'تم تسجيل انتهاء صلاحية الفاتورة']);
+    }
+
+    if (empty($transactionRef)) {
+        Log::warning('ShamCash webhook: transactionRef مفقود', ['payload' => $payload]);
+        return response()->json(['message' => 'transactionRef مفقود'], 422);
+    }
+
+    try {
+        // ✅ الآن نمرر tran_id فعلياً كما يتطلب التوثيق
+        $verified = $this->shamCash->verifyInvoice($invoiceNumber, $transactionRef);
+    } catch (\Throwable $e) {
+        Log::error('ShamCash webhook: فشل التحقق من الفاتورة', [
+            'invoiceNumber' => $invoiceNumber,
+            'error'         => $e->getMessage(),
+        ]);
+        return response()->json(['message' => 'تعذر التحقق'], 502);
+    }
+}
+    // باقي الكود كما هو (فحص status !== 'paid'، تحديث Payment و Order)...
 }

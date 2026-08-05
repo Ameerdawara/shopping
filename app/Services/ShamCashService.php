@@ -132,17 +132,24 @@ $response = Http::withHeaders($this->headers())
      * مفتاحنا السري. لذلك webhook عندنا لا يثق بمحتواه، ويتحقق دائماً
      * عبر هذه الدالة قبل ما يعتبر أي طلب مدفوعاً.
      */
-    public function verifyInvoice(string $invoiceNumber): array
-    {
-        $response = Http::withHeaders($this->headers())
-            ->get("{$this->baseUrl}/v1/invoices/{$invoiceNumber}/verify");
+   public function verifyInvoice(string $invoiceNumber, string $tranId): array
+{
+    $response = Http::withHeaders($this->headers())
+        ->post("{$this->baseUrl}/v1/invoices/{$invoiceNumber}/verify", [
+            'tran_id' => $tranId,
+        ]);
 
-        if (! $response->successful()) {
-            throw new \RuntimeException('تعذر التحقق من الفاتورة عبر شام كاش');
-        }
-
-        return $response->json();
+    if (! $response->successful()) {
+        Log::error('ShamCash: فشل التحقق من الفاتورة', [
+            'invoiceNumber' => $invoiceNumber,
+            'status'        => $response->status(),
+            'body'          => $response->body(),
+        ]);
+        throw new \RuntimeException('تعذر التحقق من الفاتورة عبر شام كاش');
     }
+
+    return $response->json();
+}
 
     /**
      * رابط فتح تطبيق شام كاش مباشرة لإتمام الدفع.
