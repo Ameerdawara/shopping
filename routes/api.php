@@ -82,7 +82,7 @@ Route::middleware('auth:sanctum')->get('/my-cart', function (Request $request) {
 Route::middleware('auth:sanctum')->group(function () {
 
 
-
+Route::post('/payments/shamcash/{orderId}/confirm', [PaymentController::class, 'confirmShamCashPayment']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
     /*
