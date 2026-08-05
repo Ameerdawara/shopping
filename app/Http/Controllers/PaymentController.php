@@ -166,14 +166,18 @@ class PaymentController extends Controller
                 ['order_id' => $order->id, 'description' => "طلب رقم {$order->id}"]
             );
         } catch (\Throwable $e) {
-            Log::error('ShamCash invoice creation failed', [
-                'order_id' => $order->id,
-                'error'    => $e->getMessage(),
-            ]);
-            $order->update(['status' => 'cancelled']);
+    Log::error('ShamCash invoice creation failed', [
+        'order_id' => $order->id,
+        'error'    => $e->getMessage(),
+    ]);
+    $order->update(['status' => 'cancelled']);
 
-            return response()->json(['message' => 'تعذر إنشاء فاتورة الدفع، حاول مرة أخرى'], 502);
-        }
+    return response()->json([
+        'message' => 'تعذر إنشاء فاتورة الدفع، حاول مرة أخرى',
+        // مؤقتاً فقط لغاية التشخيص - احذفها بعد ما تحل المشكلة
+        'debug' => config('app.debug') ? $e->getMessage() : null,
+    ], 502);
+}
 
         // ✅ invoiceNumber/invoiceId يجب أن يكون القيمة التي يرجعها شام كاش،
         // وليس قيمة نولّدها نحن - غير هيك الـ webhook والتحقق (verify) لاحقاً
