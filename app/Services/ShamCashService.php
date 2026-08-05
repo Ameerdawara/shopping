@@ -33,7 +33,7 @@ class ShamCashService
      * (invoiceNumber, amount, currency...). راجع توثيقك وعدّل فقط
      * الأسطر المعلّمة TODO إذا كانت الأسماء مختلفة.
      */
-    public function createInvoice(string $invoiceNumber, float $amount, string $currency, string $description = ''): array
+    public function createInvoice(string $invoiceNumber, float $amount, string $currency, string $walletAddress, string $description = ''): array
     {
         $response = Http::withHeaders($this->headers())
             ->post("{$this->baseUrl}/v1/invoices", [
@@ -44,7 +44,7 @@ class ShamCashService
                 'amount'        => (string) $amount,
                 'currency'      => $currency,
                 'description'   => $description,
-                'walletAddress' => config('services.shamcash.wallet_address'),
+                'walletAddress' => $walletAddress,
             ]);
 
         if (! $response->successful()) {

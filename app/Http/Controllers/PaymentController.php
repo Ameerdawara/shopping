@@ -99,6 +99,18 @@ class PaymentController extends Controller
             ? round($totalSyp / max($rate, 0.0001), 2)
             : round($totalSyp, 2);
 
+        // عنوان المحفظة يُقرأ من إعدادات لوحة التحكم (يحدّثها المدير من
+        // صفحة payImages.html) وليس من .env، حتى يقدر المدير يغيّره من
+        // الواجهة مباشرة بدون الحاجة للوصول للسيرفر.
+        $walletAddress = PaymentSetting::get('shamcash_wallet_address')
+            ?? config('services.shamcash.wallet_address');
+
+        if (empty($walletAddress)) {
+            return response()->json([
+                'message' => 'لم يتم ضبط عنوان محفظة شام كاش بعد، الرجاء التواصل مع الإدارة',
+            ], 422);
+        }
+
         $order = Order::create([
             'user_id'          => $user->id,
             'total_price'      => $totalSyp,
@@ -132,6 +144,7 @@ class PaymentController extends Controller
                 $invoiceNumber,
                 $amount,
                 $data['currency'],
+                $walletAddress,
                 "طلب رقم {$order->id}"
             );
         } catch (\Throwable $e) {
