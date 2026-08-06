@@ -9,7 +9,8 @@ use App\Http\Requests\UpdateOrderRequest;
 use App\Models\Cart;
 use App\Models\Product;
 use Illuminate\Support\Facades\Auth;
-use App\Models\ExchangeRate;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class OrderController extends Controller
 {
@@ -29,84 +30,102 @@ class OrderController extends Controller
     }
 
     /**
-     * إنشاء طلب بالدفع كاش (Cash on Delivery)
-     * يلتقط IP و User-Agent للتدقيق
+     * إنشاء طلب كاش (Cash on Delivery)
      */
     public function store(Request $request)
     {
-        $user = Auth::user();
+        try {
+            $user = Auth::user();
 
-        $data = $request->validate([
-            'shipping_address' => 'nullable|string',
-            'currency'         => 'sometimes|in:SYP,USD',
-            'is_paid'          => 'sometimes|boolean',
-        ]);
+            $data = $request->validate([
+                'shipping_address' => 'nullable|string',
+                'currency'         => 'sometimes|in:SYP,USD',
+                'is_paid'          => 'sometimes|boolean',
+            ]);
 
-        $cart = Cart::where('user_id', $user->id)
-            ->with('cartItem')
-            ->first();
+            $cart = Cart::where('user_id', $user->id)
+                ->with('cartItem')
+                ->first();
 
-        if (!$cart || $cart->cartItem->isEmpty()) {
-            return response()->json(['message' => 'السلة فارغة'], 400);
-        }
-
-        $totalPrice = 0;
-        foreach ($cart->cartItem as $item) {
-            $totalPrice += $item->unit_price * $item->quantity;
-        }
-
-        $currency = $data['currency'] ?? 'SYP';
-
-        $order = Order::create([
-            'user_id'           => $user->id,
-            'total_price'       => $totalPrice,
-            'currency'          => $currency,
-            'payment_method'    => 'cash',
-            'status'            => 'pending',
-            'is_paid'           => $data['is_paid'] ?? false,
-            'shipping_address'  => $data['shipping_address'] ?? 'عنوان غير محدد',
-            'ip_address'        => $request->ip(),
-            'user_agent'        => $request->userAgent(),
-        ]);
-
-        foreach ($cart->cartItem as $item) {
-            $orderItemData = [
-                'order_id'   => $order->id,
-                'product_id' => $item->product_id,
-                'quantity'   => $item->quantity,
-                'price'      => $item->unit_price,
-                'color'      => $item->color,
-            ];
-            if (!empty($item->size)) {
-                $orderItemData['size'] = $item->size;
+            if (!$cart || $cart->cartItem->isEmpty()) {
+                return response()->json(['message' => 'السلة فارغة'], 400);
             }
-            $order->orderItem()->create($orderItemData);
+
+            $totalPrice = 0;
+            foreach ($cart->cartItem as $item) {
+                $totalPrice += $item->unit_price * $item->quantity;
+            }
+
+            $currency = $data['currency'] ?? 'SYP';
+
+            // Use only columns that exist - fallback for missing columns
+            $orderData = [
+                'user_id'          => $user->id,
+                'total_price'      => $totalPrice,
+                'currency'         => $currency,
+                'status'           => 'pending',
+                'is_paid'          => $data['is_paid'] ?? false,
+                'shipping_address' => $data['shipping_address'] ?? 'عنوان غير محدد',
+            ];
+
+            // Add optional columns only if they exist in table schema
+            $columns = Schema::getColumnListing('orders');
+            if (in_array('payment_method', $columns)) $orderData['payment_method'] = 'cash';
+            if (in_array('ip_address', $columns)) $orderData['ip_address'] = $request->ip();
+            if (in_array('user_agent', $columns)) $orderData['user_agent'] = $request->userAgent();
+
+            $order = Order::create($orderData);
+
+            foreach ($cart->cartItem as $item) {
+                $orderItemData = [
+                    'order_id'   => $order->id,
+                    'product_id' => $item->product_id,
+                    'quantity'   => $item->quantity,
+                    'price'      => $item->unit_price,
+                    'color'      => $item->color,
+                ];
+                if (!empty($item->size)) {
+                    $orderItemData['size'] = $item->size;
+                }
+                $order->orderItem()->create($orderItemData);
+            }
+
+            $cart->cartItem()->delete();
+
+            return response()->json([
+                'message' => 'تم إنشاء الطلب بنجاح',
+                'order'   => $order->load('orderItem.product')
+            ], 201);
+
+        } catch (\Throwable $e) {
+            Log::error('Order creation failed: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json(['message' => 'خطأ في إنشاء الطلب: ' . $e->getMessage()], 500);
         }
-
-        $cart->cartItem()->delete();
-
-        return response()->json([
-            'message' => 'تم إنشاء الطلب بنجاح',
-            'order'   => $order->load('orderItem.product')
-        ], 201);
     }
 
     public function updateOrder(Request $request, $id)
     {
-        $order = Order::findOrFail($id);
+        try {
+            $order = Order::findOrFail($id);
 
-        $validated = $request->validate([
-            'status'           => 'sometimes|string|in:pending,pending_approval,processing,cancelled,completed',
-            'shipping_address' => 'sometimes|string',
-            'delivered_at'     => 'nullable|date',
-        ]);
+            $validated = $request->validate([
+                'status'           => 'sometimes|string|in:pending,pending_approval,processing,cancelled,completed',
+                'shipping_address' => 'sometimes|string',
+                'delivered_at'     => 'nullable|date',
+            ]);
 
-        $order->update($validated);
+            $order->update($validated);
 
-        return response()->json([
-            'message' => 'تم تحديث الطلب بنجاح',
-            'data'    => $order->fresh()
-        ]);
+            return response()->json([
+                'message' => 'تم تحديث الطلب بنجاح',
+                'data'    => $order->fresh()
+            ]);
+        } catch (ModelNotFoundException $e) {
+            return response()->json(['message' => 'الطلب غير موجود'], 404);
+        } catch (\Throwable $e) {
+            Log::error('Order update failed: ' . $e->getMessage());
+            return response()->json(['message' => 'خطأ في التحديث: ' . $e->getMessage()], 500);
+        }
     }
 
     public function destroy(Order $order)
@@ -117,59 +136,98 @@ class OrderController extends Controller
 
     public function getUserOrders(Request $request)
     {
-        $orders = Order::with(['orderItem.product'])
-            ->where('user_id', $request->user()->id)
-            ->orderBy('created_at', 'desc')
-            ->get();
+        try {
+            $orders = Order::with(['orderItem.product'])
+                ->where('user_id', $request->user()->id)
+                ->orderBy('created_at', 'desc')
+                ->get();
 
-        return response()->json($orders);
+            return response()->json($orders);
+        } catch (\Throwable $e) {
+            Log::error('getUserOrders failed: ' . $e->getMessage());
+            return response()->json(['message' => 'خطأ في جلب الطلبات'], 500);
+        }
     }
 
     public function getOrdersByStatus($status)
     {
-        $orders = Order::with(['user', 'orderItem.product'])
-            ->where('status', $status)
-            ->orderBy('created_at', 'desc')
-            ->get();
+        try {
+            $orders = Order::with(['user', 'orderItem.product'])
+                ->where('status', $status)
+                ->orderBy('created_at', 'desc')
+                ->get();
 
-        return response()->json($orders, 200);
+            return response()->json($orders, 200);
+        } catch (\Throwable $e) {
+            Log::error('getOrdersByStatus failed: ' . $e->getMessage());
+            return response()->json(['message' => 'خطأ في جلب الطلبات'], 500);
+        }
     }
 
     public function getMonthlySalesReport($month, $year)
     {
-        $monthlySales = Order::whereMonth('created_at', $month)
-            ->whereYear('created_at', $year)
-            ->sum('total_price');
+        try {
+            $monthlySales = Order::whereMonth('created_at', $month)
+                ->whereYear('created_at', $year)
+                ->sum('total_price');
 
-        return response()->json([
-            'month'        => $month,
-            'year'         => $year,
-            'total_sales'  => $monthlySales
-        ], 200);
+            return response()->json([
+                'month'        => $month,
+                'year'         => $year,
+                'total_sales'  => $monthlySales
+            ], 200);
+        } catch (\Throwable $e) {
+            Log::error('getMonthlySalesReport failed: ' . $e->getMessage());
+            return response()->json(['message' => 'خطأ في التقرير'], 500);
+        }
     }
 
     /**
-     * جلب جميع الطلبات للأدمن مع العلاقات الكاملة للـ Commercial Ledger
-     * يتضمن: user, profile, orderItems مع products, payment_proof
+     * جلب جميع الطلبات للأدمن - مع معالجة آمنة للعلاقات المفقودة
      */
     public function getOrdersToAdmin()
     {
-        $orders = Order::with([
-            'user:id,name,email',
-            'user.profile:id,user_id,phone,address',
-            'orderItem.product:id,name,price,image_url',
-        ])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        try {
+            $orders = Order::with([
+                'user:id,name,email',
+                'user.profile:id,user_id,phone,address',
+                'orderItem.product:id,name,price,image_url',
+            ])
+                ->orderBy('created_at', 'desc')
+                ->get();
 
-        // التأكد من فك تشفير payment_proof إذا كان string
-        $orders->transform(function ($order) {
-            if ($order->payment_proof && is_string($order->payment_proof)) {
-                $order->payment_proof = json_decode($order->payment_proof, true);
-            }
-            return $order;
-        });
+            // Safe JSON decode for payment_proof
+            $orders->transform(function ($order) {
+                if ($order->payment_proof && is_string($order->payment_proof)) {
+                    try {
+                        $order->payment_proof = json_decode($order->payment_proof, true);
+                    } catch (\Throwable $e) {
+                        $order->payment_proof = null;
+                    }
+                }
+                // Ensure relations exist (prevent null errors in frontend)
+                if (!$order->user) {
+                    $order->setRelation('user', (object)['name' => 'مستخدم محذوف', 'email' => '', 'profile' => null]);
+                }
+                if ($order->user && !$order->user->profile) {
+                    $order->user->setRelation('profile', (object)['phone' => 'غير متوفر', 'address' => null]);
+                }
+                return $order;
+            });
 
-        return response()->json(['data' => $orders]);
+            return response()->json(['data' => $orders]);
+
+        } catch (\Throwable $e) {
+            Log::error('getOrdersToAdmin CRASHED: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'sql'   => $e->getPrevious()?->getMessage() ?? 'N/A'
+            ]);
+
+            // Return empty array instead of 500 to prevent frontend crash
+            return response()->json([
+                'data' => [],
+                'error' => 'Server error: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }
