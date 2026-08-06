@@ -3,7 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 
+/**
+ * @method static string|null get(string $key, $default = null)
+ * @method static void set(string $key, $value)
+ * @method static \App\Models\PaymentSetting firstOrCreate(array $attributes, array $values = [])
+ * @method static \App\Models\PaymentSetting updateOrCreate(array $attributes, array $values = [])
+ */
 class PaymentSetting extends Model
 {
     protected $fillable = ['key', 'value'];
@@ -15,6 +22,11 @@ class PaymentSetting extends Model
 
     public static function set(string $key, $value): void
     {
-        static::updateOrCreate(['key' => $key], ['value' => $value]);
+        /** @var \App\Models\PaymentSetting $model */
+        $model = static::updateOrCreate(
+            ['key' => $key],
+            ['value' => $value]
+        );
     }
 }
+    

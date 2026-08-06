@@ -26,7 +26,6 @@ use Illuminate\Http\Request;
 */
 
 Route::get('/qr-images', function () {
-
     return response()->json([
         'shamcash_qr' => asset('storage/qr/shamcash.jpg'),
         'usdt_qr' => asset('storage/qr/usdt.jpg'),
@@ -37,8 +36,6 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::get('products', [ProductController::class, 'index']);
-// ⚠️ يجب أن يبقى هذا المسار قبل products/{productId}، وإلا سيلتقطه Laravel
-// كأن "category" هو productId ولن يصل byCategory أبداً.
 Route::get('products/category/{category}', [ProductController::class, 'byCategory']);
 Route::get('products/{productId}', [ProductController::class, 'show']);
 
@@ -50,29 +47,20 @@ Route::get('offers/{offer}', [OfferController::class, 'show']);
 Route::get('ads', [AdController::class, 'index']);
 Route::get('reviews/product/{productId}', [ReviewController::class, 'getReviewsByProduct']);
 
-// سعر الصرف الحالي (عام - يستخدمه الفرونت لعرض الأسعار المحوّلة)
+// سعر الصرف الحالي
 Route::get('/exchange-rate', [ExchangeRateController::class, 'show']);
 
-/*
-| إعدادات الدفع العامة (رابط/QR محفظة شام كاش) - يستخدمها الفرونت في
-| صفحة الدفع لعرضها للزبون كبديل يدوي عن فتح التطبيق مباشرة.
-*/
+// إعدادات الدفع العامة (للعملاء)
 Route::get('/payment-settings', [PaymentController::class, 'settings']);
 
-/*
-| Webhook شام كاش - عام (يستدعيه سيرفر شام كاش نفسه بعد الدفع، وليس
-| المستخدم، لذلك لا نضعه خلف auth:sanctum). التحقق الفعلي من صحة
-| الطلب يتم داخل PaymentController::shamCashWebhook عبر استدعاء
-| /verify على سيرفر شام كاش نفسه.
-*/
-Route::post('/webhooks/shamcash', [PaymentController::class, 'shamCashWebhook']);
+// إنشاء طلب يدوي (كاش، شام كاش، USDT)
+Route::middleware('auth:sanctum')->post('/orders/manual', [PaymentController::class, 'createManualOrder']);
 
-//جلب my cart_id
-// routes/api.php
-Route::middleware('auth:sanctum')->get('/my-cart', function (Request $request) {
-    $cart = Cart::firstOrCreate(['user_id' => $request->user()->id]);
-    return response()->json($cart);
-});
+// تقديم إثبات الدفع
+Route::middleware('auth:sanctum')->post('/orders/{orderId}/payment-proof', [PaymentController::class, 'submitPaymentProof']);
+
+// التحقق من حالة الطلب
+Route::middleware('auth:sanctum')->get('/orders/{orderId}/status', [PaymentController::class, 'checkOrderStatus']);
 
 /*
 |--------------------------------------------------------------------------
@@ -80,75 +68,37 @@ Route::middleware('auth:sanctum')->get('/my-cart', function (Request $request) {
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth:sanctum')->group(function () {
-
-
-Route::post('/payments/shamcash/{orderId}/confirm', [PaymentController::class, 'confirmShamCashPayment']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
-    /*
-    |----------------------------------
-    | NEW (Token-based Cart Routes)
-    |----------------------------------
-    */
+    // Cart Routes
     Route::get('/cart', [CardController::class, 'myCart']);
     Route::get('/cart/total', [CardController::class, 'myCartTotal']);
     Route::delete('/cart/clear', [CardController::class, 'clearMyCart']);
-
-    /*
-    |----------------------------------
-    | OLD Routes (keep as-is)
-    |----------------------------------
-    */
     Route::apiResource('carts', CardController::class);
 
-    /*
-    | Cart Items
-    */
     Route::get('carts/{cart}/items', [CartItemController::class, 'index']);
     Route::post('carts/{cart}/items', [CartItemController::class, 'store']);
     Route::put('carts/{cart}/items/{item}', [CartItemController::class, 'update']);
     Route::delete('carts/{cart}/items/{item}', [CartItemController::class, 'destroy']);
 
-    /*
-    | Orders
-    */
+    // Orders (Cash orders only - manual orders go through PaymentController)
     Route::post('orders', [OrderController::class, 'store']);
     Route::get('orders/user', [OrderController::class, 'getUserOrders']);
     Route::get('/admin/orders', [OrderController::class, 'getOrdersToAdmin']);
     Route::put('/orders/{id}/status', [OrderController::class, 'updateOrder']);
 
-    /*
-    | Order Items
-    */
     Route::get('order-items/order/{orderId}', [OrderItemController::class, 'getItemsByOrder']);
 
-    /*
-    | Payments (ShamCash)
-    */
-    Route::post('/payments/shamcash/create', [PaymentController::class, 'createShamCashInvoice']);
-    Route::get('/payments/{orderId}/status', [PaymentController::class, 'checkOrderStatus']);
-
-    /*
-    | Reviews
-    */
-    Route::apiResource('reviews', ReviewController::class)
-        ->only(['store', 'update', 'destroy']);
-
-
-
+    // Reviews
+    Route::apiResource('reviews', ReviewController::class)->only(['store', 'update', 'destroy']);
     Route::get('reviews/user/{userId}', [ReviewController::class, 'getReviewsByUser']);
 
-    /*
-    | Profile
-    */
+    // Profile
     Route::get('profile', [ProfileController::class, 'me']);
     Route::put('profile', [ProfileController::class, 'updateMe']);
 
-    /*
-    | Notifications
-    */
-    Route::apiResource('notifications', NotificationController::class)
-        ->only(['index', 'show', 'destroy']);
+    // Notifications
+    Route::apiResource('notifications', NotificationController::class)->only(['index', 'show', 'destroy']);
 });
 
 /*
@@ -157,44 +107,33 @@ Route::post('/payments/shamcash/{orderId}/confirm', [PaymentController::class, '
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth:sanctum', 'admin'])->group(function () {
-
     Route::post('upload-qr', [AddImageController::class, 'uploadQR']);
 
-    Route::apiResource('products', ProductController::class)
-        ->except(['index', 'show']);
-
-    Route::apiResource('categories', CategoryController::class)
-        ->only(['store', 'update', 'destroy']);
-
-    Route::apiResource('offers', OfferController::class)
-        ->except(['index', 'show']);
-
-    Route::apiResource('orders', OrderController::class)
-        ->except(['store']);
+    Route::apiResource('products', ProductController::class)->except(['index', 'show']);
+    Route::apiResource('categories', CategoryController::class)->only(['store', 'update', 'destroy']);
+    Route::apiResource('offers', OfferController::class)->except(['index', 'show']);
+    Route::apiResource('orders', OrderController::class)->except(['store']);
 
     Route::get('orders/status/{status}', [OrderController::class, 'getOrdersByStatus']);
-    Route::get(
-        'orders/reports/monthly/{month}/{year}',
-        [OrderController::class, 'getMonthlySalesReport']
-    );
+    Route::get('orders/reports/monthly/{month}/{year}', [OrderController::class, 'getMonthlySalesReport']);
 
-    Route::apiResource('order-items', OrderItemController::class)
-        ->only(['destroy']);
+    Route::apiResource('order-items', OrderItemController::class)->only(['destroy']);
+    Route::apiResource('ads', AdController::class)->except(['index']);
 
-    Route::apiResource('ads', AdController::class)
-        ->except(['index']);
-
-    /*
-    | Exchange Rate
-    */
+    // Exchange Rate
     Route::post('/exchange-rate', [ExchangeRateController::class, 'update']);
     Route::get('/exchange-rate/history', [ExchangeRateController::class, 'history']);
 
-    /*
-    | Payment settings - رفع صورة QR + عنوان محفظة شام كاش
-    */
+    // Payment Settings
     Route::post('/admin/payment-settings/shamcash', [PaymentController::class, 'updateShamCashSettings']);
+    Route::post('/admin/payment-settings/usdt', [PaymentController::class, 'updateUsdtSettings']);
+
+    // Manual Payment Approval
+    Route::get('/admin/orders/pending-approval', [PaymentController::class, 'getPendingApprovalOrders']);
+    Route::put('/admin/orders/{orderId}/approve', [PaymentController::class, 'approveOrder']);
+    Route::put('/admin/orders/{orderId}/reject', [PaymentController::class, 'rejectOrder']);
 });
+
 Route::get('/run-link', function () {
     \Illuminate\Support\Facades\Artisan::call('storage:link');
     return 'Storage link created successfully!';
