@@ -28,7 +28,7 @@ use Illuminate\Http\Request;
 Route::get('/qr-images', function () {
     return response()->json([
         'shamcash_qr' => asset('storage/qr/shamcash.jpg'),
-        'usdt_qr' => asset('storage/qr/usdt.jpg'),
+        'usdt_qr'     => asset('storage/qr/usdt.jpg'),
     ]);
 });
 
@@ -47,33 +47,24 @@ Route::get('offers/{offer}', [OfferController::class, 'show']);
 Route::get('ads', [AdController::class, 'index']);
 Route::get('reviews/product/{productId}', [ReviewController::class, 'getReviewsByProduct']);
 
-// سعر الصرف الحالي
+// سعر الصرف الحالي (عام)
 Route::get('/exchange-rate', [ExchangeRateController::class, 'show']);
 
-// إعدادات الدفع العامة (للعملاء)
+// إعدادات الدفع العامة (للعملاء في صفحة الدفع)
 Route::get('/payment-settings', [PaymentController::class, 'settings']);
-
-// إنشاء طلب يدوي (كاش، شام كاش، USDT)
-Route::middleware('auth:sanctum')->post('/orders/manual', [PaymentController::class, 'createManualOrder']);
-
-// تقديم إثبات الدفع
-Route::middleware('auth:sanctum')->post('/orders/{orderId}/payment-proof', [PaymentController::class, 'submitPaymentProof']);
-
-// التحقق من حالة الطلب
-Route::middleware('auth:sanctum')->get('/orders/{orderId}/status', [PaymentController::class, 'checkOrderStatus']);
 
 /*
 |--------------------------------------------------------------------------
-| Authenticated User Routes
+| Authenticated User Routes (محمية بـ auth:sanctum)
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 
-    // Cart Routes - INCLUDING /my-cart HERE
+    // Cart Routes
     Route::get('/my-cart', function (Request $request) {
         $cart = Cart::firstOrCreate(['user_id' => $request->user()->id]);
-        return response()->json($cart);
+        return response()->json($cart->load('cartItem.product'));
     });
 
     Route::get('/cart', [CardController::class, 'myCart']);
@@ -86,11 +77,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('carts/{cart}/items/{item}', [CartItemController::class, 'update']);
     Route::delete('carts/{cart}/items/{item}', [CartItemController::class, 'destroy']);
 
-    // Orders (Cash orders only - manual orders go through PaymentController)
+    // Orders - Cash Orders فقط (الطلبات اليدوية عبر PaymentController)
     Route::post('orders', [OrderController::class, 'store']);
     Route::get('orders/user', [OrderController::class, 'getUserOrders']);
-    Route::get('/admin/orders', [OrderController::class, 'getOrdersToAdmin']);
-    Route::put('/orders/{id}/status', [OrderController::class, 'updateOrder']);
+    Route::put('orders/{id}/status', [OrderController::class, 'updateOrder']);
+
+    // Manual Payment Flow (Sham Cash / USDT)
+    Route::post('/orders/manual', [PaymentController::class, 'createManualOrder']);
+    Route::post('/orders/{orderId}/payment-proof', [PaymentController::class, 'submitPaymentProof']);
+    Route::get('/orders/{orderId}/status', [PaymentController::class, 'checkOrderStatus']);
 
     Route::get('order-items/order/{orderId}', [OrderItemController::class, 'getItemsByOrder']);
 
@@ -108,7 +103,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 /*
 |--------------------------------------------------------------------------
-| Admin Routes
+| Admin Routes (محمية بـ auth:sanctum + admin middleware)
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth:sanctum', 'admin'])->group(function () {
@@ -129,16 +124,24 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
     Route::post('/exchange-rate', [ExchangeRateController::class, 'update']);
     Route::get('/exchange-rate/history', [ExchangeRateController::class, 'history']);
 
-    // Payment Settings
+    // Payment Settings (Admin)
     Route::post('/admin/payment-settings/shamcash', [PaymentController::class, 'updateShamCashSettings']);
     Route::post('/admin/payment-settings/usdt', [PaymentController::class, 'updateUsdtSettings']);
 
-    // Manual Payment Approval
+    // Manual Payment Approval (أدمن)
     Route::get('/admin/orders/pending-approval', [PaymentController::class, 'getPendingApprovalOrders']);
     Route::put('/admin/orders/{orderId}/approve', [PaymentController::class, 'approveOrder']);
     Route::put('/admin/orders/{orderId}/reject', [PaymentController::class, 'rejectOrder']);
+
+    // Admin: جميع الطلبات للـ Commercial Ledger
+    Route::get('/admin/orders', [OrderController::class, 'getOrdersToAdmin']);
 });
 
+/*
+|--------------------------------------------------------------------------
+| Utility Routes
+|--------------------------------------------------------------------------
+*/
 Route::get('/run-link', function () {
     \Illuminate\Support\Facades\Artisan::call('storage:link');
     return 'Storage link created successfully!';

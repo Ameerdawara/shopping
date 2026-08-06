@@ -19,12 +19,14 @@ class Order extends Model
         'sender_name',         // اسم المرسل
         'payment_proof',       // JSON: بيانات إثبات الدفع
         'paid_at',             // تاريخ تأكيد الدفع
+        'ip_address',          // عنوان IP العميل
+        'user_agent',          // متصفح/جهاز العميل
     ];
 
     protected $casts = [
-        'is_paid'      => 'boolean',
-        'delivered_at' => 'datetime',
-        'paid_at'      => 'datetime',
+        'is_paid'       => 'boolean',
+        'delivered_at'  => 'datetime',
+        'paid_at'       => 'datetime',
         'payment_proof' => 'array', // JSON casting
     ];
 
