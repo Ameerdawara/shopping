@@ -182,17 +182,16 @@ class OrderController extends Controller
     }
 
     /**
-     * جلب جميع الطلبات للأدمن - Fixed: removed 'address' from profile select
+     * جلب جميع الطلبات للأدمن - FIXED: Load product images relationship for image_url accessor
      */
     public function getOrdersToAdmin()
     {
         try {
             $orders = Order::with([
                 'user:id,name,email',
-                // FIXED: Profile table only has: name, image, user_id, email, phone, total_purchases
-                // REMOVED 'address' - it doesn't exist in Profile model
                 'user.profile:id,user_id,phone,email,name,total_purchases',
-                'orderItem.product:id,name,price,image_url',
+                // FIXED: Load product.images relationship so image_url accessor works
+                'orderItem.product.images',
             ])
                 ->orderBy('created_at', 'desc')
                 ->get();
@@ -224,7 +223,6 @@ class OrderController extends Controller
                 'sql'   => $e->getPrevious()?->getMessage() ?? 'N/A'
             ]);
 
-            // Return empty array instead of 500 to prevent frontend crash
             return response()->json([
                 'data' => [],
                 'error' => 'Server error: ' . $e->getMessage()
