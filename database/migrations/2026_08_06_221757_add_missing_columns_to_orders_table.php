@@ -10,7 +10,6 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('orders', function (Blueprint $table) {
-            // Add only if missing
             if (!Schema::hasColumn('orders', 'payment_method')) {
                 $table->string('payment_method')->default('cash')->after('currency');
             }
@@ -32,16 +31,14 @@ return new class extends Migration
             if (!Schema::hasColumn('orders', 'user_agent')) {
                 $table->text('user_agent')->nullable()->after('ip_address');
             }
-            // Ensure status enum includes new values (SQLite doesn't support enum modification)
-            // Handled in model scopes instead
         });
     }
 
     public function down(): void
     {
         Schema::table('orders', function (Blueprint $table) {
-            $columns = ['payment_method', 'transaction_id', 'sender_name', 'payment_proof', 'paid_at', 'ip_address', 'user_agent'];
-            $existing = array_filter($columns, fn($c) => Schema::hasColumn('orders', $c));
+            $cols = ['payment_method','transaction_id','sender_name','payment_proof','paid_at','ip_address','user_agent'];
+            $existing = array_filter($cols, fn($c) => Schema::hasColumn('orders', $c));
             if ($existing) $table->dropColumn($existing);
         });
     }
