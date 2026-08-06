@@ -20,13 +20,11 @@ class PaymentSetting extends Model
         return static::where('key', $key)->value('value') ?? $default;
     }
 
-    public static function set(string $key, $value): void
-    {
-        /** @var \App\Models\PaymentSetting $model */
-        $model = static::updateOrCreate(
-            ['key' => $key],
-            ['value' => $value]
-        );
-    }
+   public static function set(string $key, $value): void
+{
+    // updateOrCreate returns the model, not void
+    static::updateOrCreate(['key' => $key], ['value' => $value]);
+    // Remove the @var annotation or change return type
 }
-    
+
+}
