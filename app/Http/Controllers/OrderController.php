@@ -59,7 +59,6 @@ class OrderController extends Controller
 
             $currency = $data['currency'] ?? 'SYP';
 
-            // Use only columns that exist - fallback for missing columns
             $orderData = [
                 'user_id'          => $user->id,
                 'total_price'      => $totalPrice,
@@ -69,7 +68,6 @@ class OrderController extends Controller
                 'shipping_address' => $data['shipping_address'] ?? 'عنوان غير محدد',
             ];
 
-            // Add optional columns only if they exist in table schema
             $columns = Schema::getColumnListing('orders');
             if (in_array('payment_method', $columns)) $orderData['payment_method'] = 'cash';
             if (in_array('ip_address', $columns)) $orderData['ip_address'] = $request->ip();
@@ -184,14 +182,16 @@ class OrderController extends Controller
     }
 
     /**
-     * جلب جميع الطلبات للأدمن - مع معالجة آمنة للعلاقات المفقودة
+     * جلب جميع الطلبات للأدمن - Fixed: removed 'address' from profile select
      */
     public function getOrdersToAdmin()
     {
         try {
             $orders = Order::with([
                 'user:id,name,email',
-                'user.profile:id,user_id,phone,address',
+                // FIXED: Profile table only has: name, image, user_id, email, phone, total_purchases
+                // REMOVED 'address' - it doesn't exist in Profile model
+                'user.profile:id,user_id,phone,email,name,total_purchases',
                 'orderItem.product:id,name,price,image_url',
             ])
                 ->orderBy('created_at', 'desc')
@@ -211,7 +211,7 @@ class OrderController extends Controller
                     $order->setRelation('user', (object)['name' => 'مستخدم محذوف', 'email' => '', 'profile' => null]);
                 }
                 if ($order->user && !$order->user->profile) {
-                    $order->user->setRelation('profile', (object)['phone' => 'غير متوفر', 'address' => null]);
+                    $order->user->setRelation('profile', (object)['phone' => 'غير متوفر', 'email' => null, 'name' => null, 'total_purchases' => 0]);
                 }
                 return $order;
             });
