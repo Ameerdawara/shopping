@@ -141,6 +141,18 @@ class OrderController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get();
 
+            // Safe JSON decode for payment_proof (قد يصل مُشفّراً مرتين من مسار الدفع اليدوي)
+            $orders->transform(function ($order) {
+                if ($order->payment_proof && is_string($order->payment_proof)) {
+                    try {
+                        $order->payment_proof = json_decode($order->payment_proof, true);
+                    } catch (\Throwable $e) {
+                        $order->payment_proof = null;
+                    }
+                }
+                return $order;
+            });
+
             return response()->json($orders);
         } catch (\Throwable $e) {
             Log::error('getUserOrders failed: ' . $e->getMessage());
