@@ -70,7 +70,12 @@ Route::middleware('auth:sanctum')->get('/orders/{orderId}/status', [PaymentContr
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 
-    // Cart Routes
+    // Cart Routes - INCLUDING /my-cart HERE
+    Route::get('/my-cart', function (Request $request) {
+        $cart = Cart::firstOrCreate(['user_id' => $request->user()->id]);
+        return response()->json($cart);
+    });
+
     Route::get('/cart', [CardController::class, 'myCart']);
     Route::get('/cart/total', [CardController::class, 'myCartTotal']);
     Route::delete('/cart/clear', [CardController::class, 'clearMyCart']);
