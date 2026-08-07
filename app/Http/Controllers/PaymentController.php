@@ -9,6 +9,7 @@ use App\Models\PaymentSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
@@ -133,9 +134,9 @@ class PaymentController extends Controller
             ? 'pending_approval'
             : 'pending';
 
-        $order = Order::create([
+        $orderData = [
             'user_id'           => $user->id,
-            'total_price'       => $totalSyp, // دائماً مخزن بالليرة السورية
+            'total_price'       => $totalSyp, // دائماً مخزن بالليرة السورية (عملة أساس للمحاسبة الداخلية)
             'currency'          => $request->currency,
             'payment_method'    => $request->payment_method,
             'status'            => $initialStatus,
@@ -144,7 +145,15 @@ class PaymentController extends Controller
             'transaction_id'    => null,
             'sender_name'       => null,
             'payment_proof'     => null,
-        ]);
+        ];
+
+        // FIXED: تخزين سعر الصرف وقت إنشاء الطلب (إن وُجد العمود) حتى يمكن لاحقاً عرض
+        // المبلغ بالعملة الصحيحة (USD) بدل عرضه دائماً بالليرة السورية في سجل الطلبات.
+        if (Schema::hasColumn('orders', 'exchange_rate')) {
+            $orderData['exchange_rate'] = $request->currency === 'USD' ? $rate : null;
+        }
+
+        $order = Order::create($orderData);
 
         foreach ($cart->cartItem as $item) {
             $orderItemData = [
@@ -182,6 +191,8 @@ class PaymentController extends Controller
 
     /**
      * تقديم إثبات الدفع اليدوي من قبل العميل
+     * (يُستخدم أيضاً لإكمال بيانات الدفع لاحقاً من صفحة "طلباتي" في حال انقطع
+     * العميل عن إكمال الخطوة الثانية بعد إنشاء الطلب مباشرة - انظر ملاحظة FIXED أدناه)
      */
     public function submitPaymentProof(Request $request, $orderId)
     {
@@ -252,6 +263,11 @@ class PaymentController extends Controller
             'status'       => $order->status,
             'is_paid'      => (bool) $order->is_paid,
             'payment_method' => $order->payment_method,
+            // FIXED: نُعلم الفرونت إن كانت بيانات الإثبات (اسم المرسل/رقم العملية) ناقصة بعد،
+            // ليتم استئناف نموذج الإدخال تلقائياً عند تحديث الصفحة بدل ضياع الطلب بلا بيانات.
+            'needs_proof'  => $order->status === 'pending_approval'
+                && in_array($order->payment_method, ['shamcash', 'usdt'])
+                && (empty($order->transaction_id) || empty($order->sender_name)),
         ]);
     }
 

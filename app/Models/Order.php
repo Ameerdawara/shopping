@@ -10,6 +10,7 @@ class Order extends Model
         'user_id',
         'total_price',
         'currency',
+        'exchange_rate',       // سعر الصرف وقت إنشاء الطلب (يُستخدم لتحويل المبلغ عند العرض إذا كانت العملة USD)
         'payment_method',      // cash, shamcash, usdt
         'status',              // pending, pending_approval, processing, cancelled, completed
         'is_paid',
@@ -28,6 +29,7 @@ class Order extends Model
         'delivered_at'  => 'datetime',
         'paid_at'       => 'datetime',
         'payment_proof' => 'array', // JSON casting
+        'exchange_rate' => 'decimal:4',
     ];
 
     public function user()

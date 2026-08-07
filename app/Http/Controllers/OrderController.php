@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Order;
+use App\Models\ExchangeRate;
 use App\Http\Requests\StoreOrderRequest;
 use App\Http\Requests\UpdateOrderRequest;
 use App\Models\Cart;
@@ -61,7 +62,7 @@ class OrderController extends Controller
 
             $orderData = [
                 'user_id'          => $user->id,
-                'total_price'      => $totalPrice,
+                'total_price'      => $totalPrice, // دائماً مخزن بالليرة السورية (عملة أساس للمحاسبة الداخلية)
                 'currency'         => $currency,
                 'status'           => 'pending',
                 'is_paid'          => $data['is_paid'] ?? false,
@@ -72,6 +73,12 @@ class OrderController extends Controller
             if (in_array('payment_method', $columns)) $orderData['payment_method'] = 'cash';
             if (in_array('ip_address', $columns)) $orderData['ip_address'] = $request->ip();
             if (in_array('user_agent', $columns)) $orderData['user_agent'] = $request->userAgent();
+
+            // FIXED: تخزين سعر الصرف وقت إنشاء الطلب عندما تكون العملة USD، حتى يمكن
+            // لاحقاً عرض المبلغ بالدولار الصحيح في سجل الطلبات بدل عرضه دائماً بالليرة السورية.
+            if (in_array('exchange_rate', $columns)) {
+                $orderData['exchange_rate'] = $currency === 'USD' ? ExchangeRate::current() : null;
+            }
 
             $order = Order::create($orderData);
 
