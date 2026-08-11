@@ -35,6 +35,10 @@ Route::get('/qr-images', function () {
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
+// OTP Verification Flow
+Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
+Route::post('/resend-otp', [AuthController::class, 'resendOtp']);
+
 Route::get('products', [ProductController::class, 'index']);
 Route::get('products/category/{category}', [ProductController::class, 'byCategory']);
 Route::get('products/{productId}', [ProductController::class, 'show']);

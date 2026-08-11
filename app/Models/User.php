@@ -22,6 +22,10 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'phone',
+        'phone_verified_at',
+        'otp_code',
+        'otp_expires_at',
     ];
 
     /**
@@ -32,6 +36,8 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'otp_code',
+        'otp_expires_at',
     ];
 
     /**
@@ -41,9 +47,11 @@ class User extends Authenticatable
      */
     protected function casts(): array
     {
-        
+
         return [
             'email_verified_at' => 'datetime',
+            'phone_verified_at' => 'datetime',
+            'otp_expires_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
@@ -70,5 +78,9 @@ class User extends Authenticatable
     public function notifications()
     {
         return $this->hasMany(Notification::class);
+    }
+    public function getIsPhoneVerifiedAttribute()
+    {
+        return !is_null($this->phone_verified_at);
     }
 }

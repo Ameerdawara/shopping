@@ -27,12 +27,17 @@ return [
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
-    
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+    'smsgate' => [
+    'url'      => env('SMSGATE_URL', 'http://192.168.1.100:8080/message'),
+    'username' => env('SMSGATE_USERNAME'),
+    'password' => env('SMSGATE_PASSWORD'),
+],
 
 ];
