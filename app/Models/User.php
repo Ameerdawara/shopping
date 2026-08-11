@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Support\PhoneNumber;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -10,77 +10,59 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use  HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'phone',
-        'phone_verified_at',
-        'otp_code',
-        'otp_expires_at',
+        'name', 'email', 'password', 'phone',
+        'phone_verified_at', 'otp_code', 'otp_expires_at', 'role'
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
-        'password',
-        'remember_token',
-        'otp_code',
-        'otp_expires_at',
+        'password', 'remember_token', 'otp_code', 'otp_expires_at',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
-
         return [
             'email_verified_at' => 'datetime',
             'phone_verified_at' => 'datetime',
-            'otp_expires_at' => 'datetime',
-            'password' => 'hashed',
+            'otp_expires_at'    => 'datetime',
+            'password'          => 'hashed',
         ];
     }
-    public function profile()
+
+    // ---------------------------------------------------------
+    // MUTATOR: Force E.164 on ANY write (Seeder, Tinker, Other Controllers)
+    // ---------------------------------------------------------
+    public function setPhoneAttribute($value)
     {
-        return $this->hasOne(Profile::class);
+        $normalized = PhoneNumber::normalize($value);
+
+        if ($normalized) {
+            $this->attributes['phone'] = $normalized;
+        } else {
+            // Log warning but save raw to avoid silent data loss during dev/seeding
+            // In strict production, you might throw \InvalidArgumentException
+            \Log::warning('User Model: Phone normalization failed, saving raw', ['input' => $value]);
+            $this->attributes['phone'] = $value;
+        }
     }
-    public function carts()
+
+    // ---------------------------------------------------------
+    // ACCESSOR: Pretty format for Frontend Display (09XXXXXXXX)
+    // ---------------------------------------------------------
+    public function getPhoneDisplayAttribute(): string
     {
-        return $this->hasOne(Cart::class);
+        return PhoneNumber::getNationalNumber($this->phone);
     }
-    public function orders()
-    {
-        return $this->hasMany(Order::class);
-    }
-    public function reviews()
-    {
-        return $this->hasMany(Review::class);
-    }
-    public function getIsAdminAttribute()
-    {
-        return $this->role === 'admin';
-    }
-    public function notifications()
-    {
-        return $this->hasMany(Notification::class);
-    }
-    public function getIsPhoneVerifiedAttribute()
-    {
-        return !is_null($this->phone_verified_at);
-    }
+
+    // Relationships
+    public function profile() { return $this->hasOne(Profile::class); }
+    public function carts()   { return $this->hasOne(Cart::class); }
+    public function orders()  { return $this->hasMany(Order::class); }
+    public function reviews() { return $this->hasMany(Review::class); }
+    public function notifications() { return $this->hasMany(Notification::class); }
+
+    public function getIsAdminAttribute() { return $this->role === 'admin'; }
+    public function getIsPhoneVerifiedAttribute() { return !is_null($this->phone_verified_at); }
 }
