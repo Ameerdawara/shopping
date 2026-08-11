@@ -39,7 +39,7 @@ class SmsGateService
             'textMessage'        => ['text' => $message],
             'phoneNumbers'       => [$phone], // MUST be array of E.164 strings
             'withDeliveryReport' => false,    // Prevents Generic Failure on many Android versions
-            // 'simSlot' => 1, // Uncomment if device is Dual SIM and you know the slot (1 or 2)
+            'simSlot' => 1, // Uncomment if device is Dual SIM and you know the slot (1 or 2)
         ];
 
         // 3. DEBUG LOG: Log EXACT payload sent to SMS Gate Cloud
