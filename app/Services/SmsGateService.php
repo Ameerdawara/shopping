@@ -29,8 +29,8 @@ class SmsGateService
             $response = Http::withBasicAuth($this->username, $this->password)
                 ->timeout(10)
                 ->post($this->url, [
+                    'textMessage'  => ['text' => $message],
                     'phoneNumbers' => [$phone],
-                    'message'      => $message,
                 ]);
 
             if ($response->successful()) {

@@ -34,8 +34,8 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
-    'smsgate' => [
-    'url'      => env('SMSGATE_URL', 'http://192.168.1.100:8080/message'),
+   'smsgate' => [
+    'url'      => env('SMSGATE_URL', 'https://api.sms-gate.app/3rdparty/v1/messages'),
     'username' => env('SMSGATE_USERNAME'),
     'password' => env('SMSGATE_PASSWORD'),
 ],
