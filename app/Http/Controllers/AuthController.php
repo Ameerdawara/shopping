@@ -10,7 +10,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Log;           // ✅ FIX 1: Missing Import
+use Illuminate\Validation\ValidationException; // ✅ FIX 2: Better 422 handling
 use Carbon\Carbon;
 
 class AuthController extends Controller
@@ -32,25 +33,24 @@ class AuthController extends Controller
             'name'     => 'required|string|max:255',
             'email'    => 'required|email|unique:users,email',
             'password' => 'required|min:6|confirmed',
-            'phone'    => 'required|string|max:20', // Loose validation here, we normalize below
+            'phone'    => 'required|string|max:20',
         ]);
 
         // 2. NORMALIZE PHONE TO E.164
         $normalizedPhone = PhoneNumber::normalize($validated['phone']);
 
         if (!$normalizedPhone) {
-            return response()->json([
-                'message' => 'صيغة رقم الهاتف غير صحيحة. يرجى إدخاله بصيغة: 09XXXXXXXX أو +9639XXXXXXXX',
-                'errors'  => ['phone' => ['رقم الهاتف غير صالح']],
-            ], 422);
+            // Use ValidationException for automatic 422 formatting (matches frontend expectations)
+            throw ValidationException::withMessages([
+                'phone' => ['صيغة رقم الهاتف غير صحيحة. يرجى إدخاله بصيغة: 09XXXXXXXX أو +9639XXXXXXXX'],
+            ]);
         }
 
         // 3. Check Uniqueness on Normalized Phone
         if (User::where('phone', $normalizedPhone)->exists()) {
-            return response()->json([
-                'message' => 'رقم الهاتف مسجل مسبقاً',
-                'errors'  => ['phone' => ['رقم الهاتف مستخدم بالفعل']],
-            ], 422);
+            throw ValidationException::withMessages([
+                'phone' => ['رقم الهاتف مسجل مسبقاً'],
+            ]);
         }
 
         // 4. Generate OTP
@@ -61,14 +61,16 @@ class AuthController extends Controller
             'name'           => $validated['name'],
             'email'          => $validated['email'],
             'password'       => bcrypt($validated['password']),
-            'phone'          => $normalizedPhone, // STORE E.164
+            'phone'          => $normalizedPhone, // STORE E.164 (+9639...)
             'role'           => 'user',
             'otp_code'       => $otpCode,
             'otp_expires_at' => Carbon::now()->addMinutes(10),
         ]);
 
-        // 6. Send SMS (Non-blocking: don't fail registration if SMS fails, user can resend)
+        // 6. Send SMS (Non-blocking)
         $sent = $this->smsGateService->sendOtp($user->phone, $otpCode);
+
+        $phoneForFrontend = PhoneNumber::getNationalNumber($user->phone); // "0999..."
 
         if (!$sent) {
             Log::channel('sms')->warning('AuthController: Registration succeeded but SMS failed', [
@@ -78,13 +80,13 @@ class AuthController extends Controller
 
             return response()->json([
                 'message' => 'تم إنشاء الحساب، لكن حدث خطأ مؤقت في إرسال رمز التحقق. يرجى الضغط على "إعادة الإرسال" في صفحة التفعيل.',
-                'phone'   => PhoneNumber::getNationalNumber($user->phone), // Return pretty format for UI
+                'phone'   => $phoneForFrontend,
             ], 201);
         }
 
         return response()->json([
             'message' => 'تم إرسال رمز التحقق',
-            'phone'   => PhoneNumber::getNationalNumber($user->phone),
+            'phone'   => $phoneForFrontend,
         ], 201);
     }
 
@@ -98,8 +100,8 @@ class AuthController extends Controller
             'otp_code' => 'required|string|size:6',
         ]);
 
-        // Normalize incoming phone
         $normalizedPhone = PhoneNumber::normalize($validated['phone']);
+
         if (!$normalizedPhone) {
             return response()->json(['message' => 'رقم هاتف غير صالح'], 400);
         }
@@ -163,6 +165,7 @@ class AuthController extends Controller
         $validated = $request->validate(['phone' => 'required|string']);
 
         $normalizedPhone = PhoneNumber::normalize($validated['phone']);
+
         if (!$normalizedPhone) {
             return response()->json(['message' => 'رقم هاتف غير صالح'], 400);
         }
@@ -189,7 +192,7 @@ class AuthController extends Controller
         if (!$sent) {
             return response()->json([
                 'message' => 'تعذر إرسال رمز التحقق حالياً، يرجى المحاولة لاحقاً',
-            ], 502); // Bad Gateway - Upstream (SMS Gateway) failed
+            ], 502);
         }
 
         return response()->json([
@@ -223,8 +226,10 @@ class AuthController extends Controller
             ], 403);
         }
 
-        // Rotate Token
+        // Rotate Token (Sanctum Personal Access Tokens)
+        // $user->tokens() returns a HasMany relationship (Query Builder), delete() is valid.
         $user->tokens()->delete();
+
         $token = $user->createToken('api_token')->plainTextToken;
 
         return response()->json([

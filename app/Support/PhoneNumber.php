@@ -4,55 +4,66 @@ namespace App\Support;
 
 class PhoneNumber
 {
-    /**
-     * Normalize any Syrian/KSA/Generic input to E.164 (+9639XXXXXXXX).
-     * Adjust COUNTRY_CODE / LENGTH constants for your target country.
-     */
-    public const COUNTRY_CODE = '963'; // Syria
-    public const COUNTRY_DIAL_PREFIX = '0'; // Leading zero to strip
-    public const EXPECTED_LENGTH = 10; // 9XXXXXXXX (without leading 0 or country code)
+    // ✅ SYRIA CONFIGURATION
+    // National Significant Number (NSN) for Syria Mobile is 9 digits (9XXXXXXXX)
+    // Examples: 999239151, 933123456, 944123456
+    public const COUNTRY_CODE = '963';
+    public const COUNTRY_DIAL_PREFIX = '0'; // The leading '0' used domestically
+    public const EXPECTED_LENGTH = 9;       // <--- CRITICAL FIX: 9 NOT 10
 
     /**
-     * Convert input like "09xxxxxxx", "9xxxxxxx", "+9639xxxxxxx", "009639xxxxxxx"
-     * to "+9639xxxxxxx".
+     * Normalize ANY input to strict E.164: +9639XXXXXXXX
+     * Handles: "09...", "9...", "+9639...", "009639...", "+96309..." (user error)
      */
     public static function normalize(string $input): ?string
     {
-        // 1. Strip spaces, dashes, parentheses
-        $clean = preg_replace('/[\s\-\(\)]/', '', $input);
+        // 1. Strip everything except digits and leading +
+        $clean = preg_replace('/[^\d+]/', '', $input);
 
-        // 2. Handle + or 00 prefix
+        // 2. Handle International Prefix (+ or 00)
         if (str_starts_with($clean, '+')) {
             $clean = substr($clean, 1);
         } elseif (str_starts_with($clean, '00')) {
             $clean = substr($clean, 2);
         }
 
-        // 3. Strip leading national dialing prefix (0)
-        if (str_starts_with($clean, self::COUNTRY_DIAL_PREFIX)) {
-            $clean = substr($clean, 1);
-        }
-
-        // 4. Strip country code if present
+        // 3. Strip Country Code if present (963)
         if (str_starts_with($clean, self::COUNTRY_CODE)) {
             $clean = substr($clean, strlen(self::COUNTRY_CODE));
         }
 
-        // 5. Validate remaining length (National Significant Number)
-        if (strlen($clean) !== self::EXPECTED_LENGTH || !ctype_digit($clean)) {
-            return null; // Invalid format
+        // 4. Strip National Trunk Prefix (0) if present
+        // This handles cases like: User typed "+9630999..." -> stripped to "0999..." -> strip 0 -> "999..."
+        if (str_starts_with($clean, self::COUNTRY_DIAL_PREFIX)) {
+            $clean = substr($clean, 1);
         }
 
-        // 6. Return E.164
+        // 5. Validate: Must be exactly 9 digits for Syria
+        if (strlen($clean) !== self::EXPECTED_LENGTH || !ctype_digit($clean)) {
+            return null;
+        }
+
+        // 6. Must start with 9 (Syria Mobile Prefixes: 93, 94, 95, 96, 98, 99)
+        if ($clean[0] !== '9') {
+            return null; // Not a valid Syrian mobile prefix
+        }
+
+        // 7. Return Perfect E.164
         return '+' . self::COUNTRY_CODE . $clean;
     }
 
     /**
-     * Get the raw national number (9XXXXXXXX) for DB storage if you prefer not storing +.
-     * But for SMS Gate, ALWAYS send E.164.
+     * Get National Format for UI Display: "09XXXXXXXX" or "9XXXXXXXX"
+     * Frontend expects this for the "Resend OTP" screen.
      */
     public static function getNationalNumber(string $e164): string
     {
-        return substr($e164, strlen('+' . self::COUNTRY_CODE));
+        $prefix = '+' . self::COUNTRY_CODE;
+        if (str_starts_with($e164, $prefix)) {
+            $national = substr($e164, strlen($prefix)); // "999239151"
+            // Return with leading zero for user-friendly display: "0999239151"
+            return self::COUNTRY_DIAL_PREFIX . $national;
+        }
+        return $e164;
     }
 }
