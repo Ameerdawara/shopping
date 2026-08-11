@@ -31,6 +31,9 @@ class SmsGateService
                 ->post($this->url, [
                     'textMessage'  => ['text' => $message],
                     'phoneNumbers' => [$phone],
+                    // إيقاف تقارير التسليم: هذا هو الحل الموثّق رسمياً لخطأ
+                    // RESULT_ERROR_GENERIC_FAILURE في حال كانت الشريحة/الرصيد/الشبكة سليمة
+                    'withDeliveryReport' => false,
                 ]);
 
             if ($response->successful()) {
