@@ -175,8 +175,8 @@ class AuthController extends Controller
             ], 401);
         }
 
-        // منع تسجيل الدخول قبل تفعيل رقم الهاتف عبر OTP
-        if (!$user->phone_verified_at) {
+        // منع تسجيل الدخول قبل تفعيل رقم الهاتف عبر OTP (لا ينطبق على حسابات الأدمن)
+        if ($user->role !== 'admin' && !$user->phone_verified_at) {
             return response()->json([
                 'message' => 'يرجى تفعيل رقم هاتفك أولاً',
                 'phone' => $user->phone,
