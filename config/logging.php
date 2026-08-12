@@ -133,11 +133,6 @@ return [
             'days'       => 14,
             'permission' => 0664,
         ],
-        'stack' => [
-            'driver' => 'stack',
-            'channels' => ['daily', 'sms'], // Logs to both storage/logs/laravel.log AND storage/logs/sms.log
-            'ignore_exceptions' => false,
-        ],
 
 
     ],
