@@ -4,23 +4,23 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Services\SmsGateService;
+use App\Services\SmsService;
 use App\Support\PhoneNumber;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;           // ✅ FIX 1: Missing Import
-use Illuminate\Validation\ValidationException; // ✅ FIX 2: Better 422 handling
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Carbon\Carbon;
 
 class AuthController extends Controller
 {
-    protected SmsGateService $smsGateService;
+    protected SmsService $smsService;
 
-    public function __construct(SmsGateService $smsGateService)
+    public function __construct(SmsService $smsService)
     {
-        $this->smsGateService = $smsGateService;
+        $this->smsService = $smsService;
     }
 
     // ---------------------------------------------------------
@@ -40,7 +40,6 @@ class AuthController extends Controller
         $normalizedPhone = PhoneNumber::normalize($validated['phone']);
 
         if (!$normalizedPhone) {
-            // Use ValidationException for automatic 422 formatting (matches frontend expectations)
             throw ValidationException::withMessages([
                 'phone' => ['صيغة رقم الهاتف غير صحيحة. يرجى إدخاله بصيغة: 09XXXXXXXX أو +9639XXXXXXXX'],
             ]);
@@ -61,16 +60,16 @@ class AuthController extends Controller
             'name'           => $validated['name'],
             'email'          => $validated['email'],
             'password'       => bcrypt($validated['password']),
-            'phone'          => $normalizedPhone, // STORE E.164 (+9639...)
+            'phone'          => $normalizedPhone,
             'role'           => 'user',
             'otp_code'       => $otpCode,
             'otp_expires_at' => Carbon::now()->addMinutes(10),
         ]);
 
-        // 6. Send SMS (Non-blocking)
-        $sent = $this->smsGateService->sendOtp($user->phone, $otpCode);
+        // 6. Send SMS
+        $sent = $this->smsService->sendOtp($user->phone, $otpCode);
 
-        $phoneForFrontend = PhoneNumber::getNationalNumber($user->phone); // "0999..."
+        $phoneForFrontend = PhoneNumber::getNationalNumber($user->phone);
 
         if (!$sent) {
             Log::channel('sms')->warning('AuthController: Registration succeeded but SMS failed', [
@@ -124,19 +123,16 @@ class AuthController extends Controller
             return response()->json(['message' => 'انتهت صلاحية رمز التحقق، يرجى طلب رمز جديد'], 410);
         }
 
-        // Timing-safe comparison
         if (!hash_equals((string) $user->otp_code, (string) $validated['otp_code'])) {
             return response()->json(['message' => 'رمز التحقق غير صحيح'], 422);
         }
 
-        // SUCCESS: Transactional User Activation
         return DB::transaction(function () use ($user) {
             $user->phone_verified_at = Carbon::now();
             $user->otp_code = null;
             $user->otp_expires_at = null;
             $user->save();
 
-            // Create Profile & Cart (Deferred until verification)
             $user->profile()->firstOrCreate([], [
                 'name'    => $user->name,
                 'email'   => $user->email,
@@ -180,14 +176,12 @@ class AuthController extends Controller
             return response()->json(['message' => 'الحساب مفعل مسبقاً'], 409);
         }
 
-        // Generate New OTP
         $otpCode = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         $user->otp_code = $otpCode;
         $user->otp_expires_at = Carbon::now()->addMinutes(10);
         $user->save();
 
-        // Send
-        $sent = $this->smsGateService->sendOtp($user->phone, $otpCode);
+        $sent = $this->smsService->sendOtp($user->phone, $otpCode);
 
         if (!$sent) {
             return response()->json([
@@ -217,17 +211,14 @@ class AuthController extends Controller
             return response()->json(['message' => 'البيانات غير صحيحة'], 401);
         }
 
-        // Enforce Phone Verification for non-admins
         if ($user->role !== 'admin' && !$user->phone_verified_at) {
             return response()->json([
-                'message'           => 'يرجى تفعيل رقم هاتفك أولاً',
-                'phone'             => PhoneNumber::getNationalNumber($user->phone),
-                'requires_verification' => true,
+                'message'                => 'يرجى تفعيل رقم هاتفك أولاً',
+                'phone'                  => PhoneNumber::getNationalNumber($user->phone),
+                'requires_verification'  => true,
             ], 403);
         }
 
-        // Rotate Token (Sanctum Personal Access Tokens)
-        // $user->tokens() returns a HasMany relationship (Query Builder), delete() is valid.
         $user->tokens()->delete();
 
         $token = $user->createToken('api_token')->plainTextToken;

@@ -34,10 +34,12 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
-   'smsgate' => [
-    'url'      => env('SMSGATE_URL', 'https://api.sms-gate.app/3rdparty/v1/messages'),
-    'username' => env('SMSGATE_USERNAME'),
-    'password' => env('SMSGATE_PASSWORD'),
-],
+
+    // ✅ EazySendSMS (يحل محل SMSGate القديم بالكامل)
+    'eazysendsms' => [
+        'url'       => env('EAZYSENDSMS_URL', 'https://restapi.easysendsms.app/v1/rest/sms/send'),
+        'api_key'   => env('EAZYSENDSMS_API_KEY'),
+        'sender_id' => env('EAZYSENDSMS_SENDER_ID'),
+    ],
 
 ];

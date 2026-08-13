@@ -6,91 +6,94 @@ use App\Support\PhoneNumber;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-class SmsGateService
+class SmsService
 {
     protected string $url;
-    protected string $username;
-    protected string $password;
+    protected string $apiKey;
+    protected string $senderId;
 
     public function __construct()
     {
-        $this->url      = config('services.smsgate.url');
-        $this->username = config('services.smsgate.username');
-        $this->password = config('services.smsgate.password');
+        $this->url      = config('services.eazysendsms.url');
+        $this->apiKey   = config('services.eazysendsms.api_key');
+        $this->senderId = config('services.eazysendsms.sender_id');
     }
 
+    /**
+     * إرسال رمز التحقق عبر EazySendSMS REST API v1
+     */
     public function sendOtp(string $rawPhone, string $code): bool
     {
-        // 1. NORMALIZE TO E.164 (Critical for Android SmsManager)
+        // 1. تطبيع الرقم إلى E.164 (نفس منطق PhoneNumber المستخدم سابقاً)
         $phone = PhoneNumber::normalize($rawPhone);
 
         if (!$phone) {
-            Log::error('SmsGateService: Invalid phone number format', [
+            Log::error('SmsService: Invalid phone number format', [
                 'input' => $rawPhone,
-                'message' => 'Phone number could not be normalized to E.164. Check PhoneNumber::COUNTRY_CODE/LENGTH config.'
             ]);
             return false;
         }
 
+        // EazySendSMS يتوقع الرقم بدون علامة + (مثال: 963999239151)
+        $toNumber = ltrim($phone, '+');
+
         $message = "رمز التحقق الخاص بك في مودرن ماركت هو: {$code}";
 
-        // 2. PAYLOAD - Match SMS Gate API Spec exactly
         $payload = [
-            'textMessage'        => ['text' => $message],
-            'phoneNumbers'       => [$phone], // MUST be array of E.164 strings
-            'withDeliveryReport' => false,    // Prevents Generic Failure on many Android versions
-            'simNumber'          => 1,        // ✅ الحقل الصحيح حسب توثيق SMSGate (كان مكتوب خطأً simSlot)
+            'from' => $this->senderId,
+            'to'   => $toNumber,
+            'text' => $message,
+            'type' => '1', // Unicode - إلزامي للنصوص العربية
         ];
 
-        // 3. DEBUG LOG: Log EXACT payload sent to SMS Gate Cloud
-        Log::channel('sms')->info('SmsGateService: Attempting Send', [
+        Log::channel('sms')->info('SmsService: Attempting Send', [
             'endpoint' => $this->url,
-            'payload'  => $payload, // Contains the formatted +963... number
+            'payload'  => $payload,
         ]);
 
         try {
-            $response = Http::withBasicAuth($this->username, $this->password)
-                ->timeout(15) // Increase timeout slightly for cloud relay
-                ->acceptJson()
+            $response = Http::withHeaders([
+                    'apikey'       => $this->apiKey,
+                    'Content-Type' => 'application/json',
+                    'Accept'       => 'application/json',
+                ])
+                ->timeout(15)
                 ->post($this->url, $payload);
 
-            // 4. LOG RAW RESPONSE (Success or Fail)
-            $responseBody = $response->json(); // Safer than body()
-            $status = $response->status();
+            $responseBody = $response->json();
+            $status       = $response->status();
+            $apiStatus    = $responseBody['status'] ?? null;
 
-            Log::channel('sms')->info('SmsGateService: Response Received', [
-                'status' => $status,
-                'response' => $responseBody,
-                'sent_to' => $phone,
+            Log::channel('sms')->info('SmsService: Response Received', [
+                'http_status' => $status,
+                'response'    => $responseBody,
+                'sent_to'     => $toNumber,
             ]);
 
-            if ($response->successful()) {
-                // SMS Gate Cloud accepted the request.
-                // Note: This DOES NOT guarantee delivery to handset, only queuing on Android device.
+            // نجاح الإرسال يتطلب: HTTP ناجح + status == 'OK' من EazySendSMS
+            if ($response->successful() && $apiStatus === 'OK') {
                 return true;
             }
 
-            // Handle Specific SMS Gate Errors (e.g., device offline, quota)
-            $errorMsg = $responseBody['message'] ?? 'Unknown SMS Gate Error';
-            Log::error('SmsGateService: API Error', [
-                'status' => $status,
-                'error' => $errorMsg,
-                'phone' => $phone,
+            Log::error('SmsService: API Error', [
+                'http_status' => $status,
+                'response'    => $responseBody,
+                'phone'       => $toNumber,
             ]);
 
             return false;
 
         } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            Log::error('SmsGateService: Network/Connection Error (Hostinger -> SMS Gate Cloud)', [
+            Log::error('SmsService: Network/Connection Error', [
                 'error' => $e->getMessage(),
-                'phone' => $phone,
+                'phone' => $toNumber,
             ]);
             return false;
         } catch (\Throwable $e) {
-            Log::error('SmsGateService: Unexpected Exception', [
+            Log::error('SmsService: Unexpected Exception', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-                'phone' => $phone,
+                'phone' => $toNumber,
             ]);
             return false;
         }
