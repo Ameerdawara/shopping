@@ -102,6 +102,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('profile', [ProfileController::class, 'updateMe']);
 
     // Notifications
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
+    Route::put('/notifications/{notification}/read', [NotificationController::class, 'markRead']);
     Route::apiResource('notifications', NotificationController::class)->only(['index', 'show', 'destroy']);
 });
 

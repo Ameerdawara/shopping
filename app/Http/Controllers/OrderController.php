@@ -98,6 +98,15 @@ class OrderController extends Controller
 
             $cart->cartItem()->delete();
 
+            // إشعار الأدمن بوجود طلب جديد
+            NotificationController::notifyAdmins(
+                'طلب جديد #' . $order->id,
+                'طلب جديد بقيمة ' . number_format($totalPrice) . ' ل.س من ' . ($user->name ?? 'عميل'),
+                'order',
+                $order->id,
+                '/Orders/Orders.html?order=' . $order->id
+            );
+
             return response()->json([
                 'message' => 'تم إنشاء الطلب بنجاح',
                 'order'   => $order->load('orderItem.product')
@@ -121,6 +130,17 @@ class OrderController extends Controller
             ]);
 
             $order->update($validated);
+
+            if (isset($validated['status'])) {
+                NotificationController::notifyUser(
+                    $order->user_id,
+                    'تحديث حالة الطلب #' . $order->id,
+                    'أصبحت حالة طلبك الآن: ' . $validated['status'],
+                    'order_status',
+                    $order->id,
+                    '/Orders/MyOrders.html?order=' . $order->id
+                );
+            }
 
             return response()->json([
                 'message' => 'تم تحديث الطلب بنجاح',

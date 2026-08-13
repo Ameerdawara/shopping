@@ -174,6 +174,15 @@ class PaymentController extends Controller
         // تفريغ السلة
         $cart->cartItem()->delete();
 
+        // إشعار الأدمن بوجود طلب جديد يحتاج مراجعة (خاصة الدفع اليدوي)
+        NotificationController::notifyAdmins(
+            'طلب جديد #' . $order->id,
+            'طلب جديد بقيمة ' . number_format($amount) . ' ' . $request->currency . ' عبر ' . $request->payment_method,
+            'order',
+            $order->id,
+            '/Orders/Orders.html?order=' . $order->id
+        );
+
         // إرجاع معلومات الدفع للفرونت
         $paymentInfo = $this->getPaymentMethodInfo($request->payment_method);
 
@@ -305,6 +314,15 @@ class PaymentController extends Controller
             'paid_at'    => now(),
         ]);
 
+        NotificationController::notifyUser(
+            $order->user_id,
+            'تم قبول طلبك #' . $order->id,
+            'تم تأكيد الدفع وجاري تجهيز طلبك للتوصيل',
+            'order_approved',
+            $order->id,
+            '/Orders/MyOrders.html?order=' . $order->id
+        );
+
         return response()->json([
             'message' => 'تم قبول الطلب وتأكيد الدفع بنجاح',
             'order'   => $order->fresh(),
@@ -333,6 +351,15 @@ class PaymentController extends Controller
                 ['rejected_at' => now()->toISOString(), 'rejection_reason' => $request->rejection_reason]
             )),
         ]);
+
+        NotificationController::notifyUser(
+            $order->user_id,
+            'تم رفض طلبك #' . $order->id,
+            $request->rejection_reason ?: 'لم يتم قبول إثبات الدفع، يرجى التواصل مع الدعم',
+            'order_rejected',
+            $order->id,
+            '/Orders/MyOrders.html?order=' . $order->id
+        );
 
         return response()->json([
             'message' => 'تم رفض الطلب وإلغاؤه',
