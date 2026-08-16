@@ -34,7 +34,7 @@ class SmsService
 
         $payload = [
             'to'          => $phone,           // string, not array — confirmed
-            'channel'     => 'local_sms',
+            'channel'     => 'whatsapp_user_session', // TEMP: local_sms not enabled on Free Plan yet
             'messageType' => 'free_text',      // confirmed via live cURL example
             'content'     => [
                 'text' => $message,
@@ -45,7 +45,7 @@ class SmsService
 
         Log::channel('sms')->info('SmsService: Attempting Send', [
             'provider' => 'rasel', 'endpoint' => $this->url,
-            'recipient' => $maskedPhone, 'message_type' => 'free_text', 'channel' => 'local_sms',
+            'recipient' => $maskedPhone, 'message_type' => 'free_text', 'channel' => 'whatsapp_user_session',
         ]);
 
         try {
