@@ -138,7 +138,7 @@ class OrderController extends Controller
                     'أصبحت حالة طلبك الآن: ' . $validated['status'],
                     'order_status',
                     $order->id,
-                    '/Orders/MyOrders.html?order=' . $order->id
+                    '/Profile/MyOrders.html?order=' . $order->id
                 );
             }
 

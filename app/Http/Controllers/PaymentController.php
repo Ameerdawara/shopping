@@ -183,6 +183,18 @@ class PaymentController extends Controller
             '/Orders/Orders.html?order=' . $order->id
         );
 
+        // إشعار الزبون نفسه بضرورة إكمال بيانات الدفع (لأن رقم العملية واسم المرسل فارغان الآن)
+        if (in_array($request->payment_method, ['shamcash', 'usdt'])) {
+            NotificationController::notifyUser(
+                $user->id,
+                'أكمل بيانات الدفع لطلبك #' . $order->id,
+                'طلبك بانتظار إرسال رقم العملية واسم المرسل لتأكيد الدفع ومتابعة المعالجة.',
+                'payment_incomplete',
+                $order->id,
+                '/Profile/MyOrders.html?order=' . $order->id
+            );
+        }
+
         // إرجاع معلومات الدفع للفرونت
         $paymentInfo = $this->getPaymentMethodInfo($request->payment_method);
 
@@ -252,6 +264,25 @@ class PaymentController extends Controller
             'status'          => 'pending_approval', // يبقى كما هو للأمان
         ]);
 
+        // طمأنة الزبون أن البيانات وصلت وقيد المراجعة
+        NotificationController::notifyUser(
+            $order->user_id,
+            'تم استلام إثبات الدفع لطلبك #' . $order->id,
+            'إثبات الدفع قيد المراجعة من قبل الإدارة، سنعلمك فور تأكيد الطلب.',
+            'proof_submitted',
+            $order->id,
+            '/Profile/MyOrders.html?order=' . $order->id
+        );
+
+        // تنبيه الأدمن أن هذا الطلب أصبح جاهزاً فعلياً للمراجعة (البيانات مكتملة الآن)
+        NotificationController::notifyAdmins(
+            'إثبات دفع جاهز للمراجعة #' . $order->id,
+            'أرسل الزبون بيانات الدفع للطلب #' . $order->id . ' وهو الآن بانتظار المراجعة والموافقة.',
+            'order',
+            $order->id,
+            '/Orders/Orders.html?order=' . $order->id
+        );
+
         return response()->json([
             'message' => 'تم إرسال إثبات الدفع بنجاح، سيتم مراجعته من قبل الإدارة خلال وقت قصير',
             'order'   => $order->fresh(),
@@ -320,7 +351,7 @@ class PaymentController extends Controller
             'تم تأكيد الدفع وجاري تجهيز طلبك للتوصيل',
             'order_approved',
             $order->id,
-            '/Orders/MyOrders.html?order=' . $order->id
+            '/Profile/MyOrders.html?order=' . $order->id
         );
 
         return response()->json([
@@ -358,7 +389,7 @@ class PaymentController extends Controller
             $request->rejection_reason ?: 'لم يتم قبول إثبات الدفع، يرجى التواصل مع الدعم',
             'order_rejected',
             $order->id,
-            '/Orders/MyOrders.html?order=' . $order->id
+            '/Profile/MyOrders.html?order=' . $order->id
         );
 
         return response()->json([

@@ -35,11 +35,9 @@ return [
         ],
     ],
 
-    // ✅ EazySendSMS (يحل محل SMSGate القديم بالكامل)
-    'eazysendsms' => [
-        'url'       => env('EAZYSENDSMS_URL', 'https://restapi.easysendsms.app/v1/rest/sms/send'),
-        'api_key'   => env('EAZYSENDSMS_API_KEY'),
-        'sender_id' => env('EAZYSENDSMS_SENDER_ID'),
-    ],
+   'rasel' => [
+    'url'     => env('RASEL_API_URL', 'https://raselsms.com/api/v2/messages/send'),
+    'api_key' => env('RASEL_API_KEY'),
+],
 
 ];
