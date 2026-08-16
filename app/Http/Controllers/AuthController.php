@@ -17,10 +17,12 @@ use Carbon\Carbon;
 class AuthController extends Controller
 {
     protected SmsService $smsService;
+    protected bool $otpEnabled;
 
     public function __construct(SmsService $smsService)
     {
         $this->smsService = $smsService;
+        $this->otpEnabled = (bool) config('services.otp.enabled', true);
     }
 
     // ---------------------------------------------------------
@@ -51,6 +53,48 @@ class AuthController extends Controller
                 'phone' => ['رقم الهاتف مسجل مسبقاً'],
             ]);
         }
+
+        // ===========================================================
+        // OTP DISABLED: تفعيل فوري بدون SMS (مؤقت لحين تفعيل باقة Rasel)
+        // ===========================================================
+        if (!$this->otpEnabled) {
+            $user = User::create([
+                'name'              => $validated['name'],
+                'email'             => $validated['email'],
+                'password'          => bcrypt($validated['password']),
+                'phone'             => $normalizedPhone,
+                'role'              => 'user',
+                'phone_verified_at' => Carbon::now(),
+            ]);
+
+            return DB::transaction(function () use ($user) {
+                $user->profile()->firstOrCreate([], [
+                    'name'    => $user->name,
+                    'email'   => $user->email,
+                    'phone'   => $user->phone,
+                    'address' => null,
+                ]);
+
+                $user->carts()->firstOrCreate(['user_id' => $user->id]);
+
+                $token = $user->createToken('api_token')->plainTextToken;
+
+                Log::channel('sms')->info('AuthController: User auto-verified (OTP disabled)', [
+                    'user_id' => $user->id,
+                ]);
+
+                return response()->json([
+                    'message' => 'تم إنشاء الحساب بنجاح',
+                    'token'   => $token,
+                    'user'    => $user->fresh()->load('profile'),
+                    'role'    => 'user',
+                ], 201);
+            });
+        }
+
+        // ===========================================================
+        // OTP ENABLED: التدفق الأصلي (بدون أي تعديل)
+        // ===========================================================
 
         // 4. Generate OTP
         $otpCode = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
@@ -94,6 +138,10 @@ class AuthController extends Controller
     // ---------------------------------------------------------
     public function verifyOtp(Request $request)
     {
+        if (!$this->otpEnabled) {
+            return response()->json(['message' => 'ميزة التحقق عبر الرمز معطلة حالياً'], 400);
+        }
+
         $validated = $request->validate([
             'phone'    => 'required|string',
             'otp_code' => 'required|string|size:6',
@@ -158,6 +206,10 @@ class AuthController extends Controller
     // ---------------------------------------------------------
     public function resendOtp(Request $request)
     {
+        if (!$this->otpEnabled) {
+            return response()->json(['message' => 'ميزة التحقق عبر الرمز معطلة حالياً'], 400);
+        }
+
         $validated = $request->validate(['phone' => 'required|string']);
 
         $normalizedPhone = PhoneNumber::normalize($validated['phone']);

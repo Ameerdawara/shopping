@@ -40,4 +40,10 @@ return [
     'api_key' => env('RASEL_API_KEY'),
 ],
 
+    // مفتاح تشغيل/إيقاف نظام OTP بالكامل — عطّله مؤقتاً لحين تفعيل باقة Rasel المدفوعة
+    // لإعادة التفعيل لاحقاً: غيّر القيمة بـ .env فقط (OTP_ENABLED=true) — بدون لمس أي كود آخر
+    'otp' => [
+        'enabled' => env('OTP_ENABLED', true),
+    ],
+
 ];
