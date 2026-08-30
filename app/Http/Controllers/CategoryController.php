@@ -31,13 +31,13 @@ class CategoryController extends Controller
      */
     public function store(Request $request)
     {
-      $data = $request->validate([
-    'name'        => 'required|string|max:255|unique:categories,name',
-    'slug'        => 'nullable|string|max:255|unique:categories,slug',
-    'description' => 'nullable|string',
-    'image'       => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-    'icon'        => 'nullable|string|max:255', // تمت إضافة هذا السطر
-]);
+        $data = $request->validate([
+            'name'        => 'required|string|max:255|unique:categories,name',
+            'slug'        => 'nullable|string|max:255|unique:categories,slug',
+            'description' => 'nullable|string',
+            'image'       => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'icon'        => 'nullable|string|max:255',
+        ]);
 
         $data['slug'] = $data['slug'] ?? Str::slug($data['name']);
 
@@ -55,13 +55,15 @@ class CategoryController extends Controller
      */
     public function update(Request $request, Category $category)
     {
+        // ملاحظة: قواعد unique هنا تستثني التصنيف الحالي (ignore($category->id))
+        // لأن القاعدة القديمة كانت تمنع حفظ التعديل حتى لو لم يتغيّر الاسم/الـ slug إطلاقاً
         $data = $request->validate([
-    'name'        => 'required|string|max:255|unique:categories,name',
-    'slug'        => 'nullable|string|max:255|unique:categories,slug',
-    'description' => 'nullable|string',
-    'image'       => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
-    'icon'        => 'nullable|string|max:255', // تمت إضافة هذا السطر
-]);
+            'name'        => ['required', 'string', 'max:255', Rule::unique('categories', 'name')->ignore($category->id)],
+            'slug'        => ['nullable', 'string', 'max:255', Rule::unique('categories', 'slug')->ignore($category->id)],
+            'description' => 'nullable|string',
+            'image'       => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'icon'        => 'nullable|string|max:255',
+        ]);
 
         if ($request->hasFile('image')) {
             if ($category->image && Storage::disk('public')->exists($category->image)) {
