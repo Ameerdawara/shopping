@@ -32,7 +32,7 @@ class ProductResource extends JsonResource
         'buyCount' => $this->buyCount,
         'category' => $this->category,
         'brand' => $this->brand,
-
+        'currency' => $this->currency,
         'image_url' => $this->images->first()
             ? asset('storage/' . $this->images->first()->image)
             : null,
