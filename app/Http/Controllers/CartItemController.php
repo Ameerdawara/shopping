@@ -45,7 +45,7 @@ class CartItemController extends Controller
             ->first();
 
         // حساب السعر الأساسي بعد الخصم إذا وُجد عرض (بالعملة الأساسية)
-        $basePrice = $product->price;
+        $basePrice = $product->price_syp;
         if ($offer && !empty($offer->discount_percentage) && $offer->discount_percentage > 0) {
             $basePrice = $basePrice - ($basePrice * ($offer->discount_percentage / 100));
         }
