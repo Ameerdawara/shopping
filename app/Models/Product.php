@@ -11,6 +11,7 @@ class Product extends Model
         'name',
         'description',
         'price',
+        'currency',      // العملة التي تم إدخال السعر بها: USD أو SYP
         'buyCount',
         'category',
         'category_id',
@@ -47,7 +48,7 @@ class Product extends Model
     {
         return $this->hasMany(ProductSize::class);
     }
-    protected $appends = ['image_url'];
+    protected $appends = ['image_url', 'price_syp'];
 
     public function getImageUrlAttribute()
     {
@@ -55,6 +56,21 @@ class Product extends Model
             return asset('storage/' . $this->images->first()->image);
         }
         return null;
+    }
+
+    /**
+     * السعر بالليرة السورية دائماً، جاهز للعرض للزبون بغض النظر عن
+     * العملة التي أدخلها الأدمن أصلاً (USD أو SYP).
+     * - إذا كان المنتج مسعّراً بالدولار: يتم التحويل تلقائياً حسب آخر سعر صرف.
+     * - إذا كان مسعّراً بالليرة أصلاً: تُعاد القيمة كما هي.
+     */
+    public function getPriceSypAttribute()
+    {
+        if ($this->currency === 'USD') {
+            return \App\Models\ExchangeRate::convert((float) $this->price);
+        }
+
+        return (float) $this->price;
     }
     protected static function booted()
     {

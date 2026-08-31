@@ -67,6 +67,8 @@ class ProductController extends Controller
             'name'        => 'required|string|max:255',
             'description' => 'required|string',
             'price'       => 'required|numeric|min:0',
+            // عملة السعر المُدخل: دولار أو ليرة سورية (افتراضياً SYP إن لم تُرسل)
+            'currency'    => 'nullable|in:USD,SYP',
             // التصنيف: يقبل category_id (الطريقة الجديدة) أو category كنص (توافق مع عملاء API القدامى)
             'category_id' => 'nullable|exists:categories,id',
             'category'    => 'required_without:category_id|nullable|string|max:255',
@@ -89,6 +91,7 @@ class ProductController extends Controller
             'name'        => $data['name'],
             'description' => $data['description'],
             'price'       => $data['price'],
+            'currency'    => $data['currency'] ?? 'SYP',
             'category_id' => $category?->id,
             'category'    => $category?->name, // يبقى العمود النصي متزامناً لأي كود قديم ما زال يقرأه مباشرة
             'brand'       => $data['brand'] ?? 'N/A',
@@ -131,6 +134,7 @@ class ProductController extends Controller
             'name'        => 'sometimes|string|max:255',
             'description' => 'sometimes|string',
             'price'       => 'sometimes|numeric|min:0',
+            'currency'    => 'sometimes|in:USD,SYP',
             'category_id' => 'sometimes|nullable|exists:categories,id',
             'category'    => 'sometimes|nullable|string|max:255',
             'brand'       => 'sometimes|string|max:255',
