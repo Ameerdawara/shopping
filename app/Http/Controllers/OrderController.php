@@ -28,7 +28,12 @@ class OrderController extends Controller
 
     public function show(Order $order)
     {
-        return response()->json($order->load(['user', 'orderItem.product']), 200);
+        return response()->json(
+            $order->load(['user', 'orderItem.product' => function ($q) {
+                $q->withTrashed();
+            }]),
+            200
+        );
     }
 
     /**
@@ -163,7 +168,9 @@ class OrderController extends Controller
     public function getUserOrders(Request $request)
     {
         try {
-            $orders = Order::with(['orderItem.product'])
+            $orders = Order::with(['orderItem.product' => function ($q) {
+                    $q->withTrashed();
+                }])
                 ->where('user_id', $request->user()->id)
                 ->orderBy('created_at', 'desc')
                 ->get();
@@ -190,7 +197,9 @@ class OrderController extends Controller
     public function getOrdersByStatus($status)
     {
         try {
-            $orders = Order::with(['user', 'orderItem.product'])
+            $orders = Order::with(['user', 'orderItem.product' => function ($q) {
+                    $q->withTrashed();
+                }])
                 ->where('status', $status)
                 ->orderBy('created_at', 'desc')
                 ->get();
@@ -230,7 +239,11 @@ class OrderController extends Controller
                 'user:id,name,email',
                 'user.profile:id,user_id,phone,email,name,total_purchases',
                 // FIXED: Load product.images relationship so image_url accessor works
-                'orderItem.product.images',
+                // withTrashed(): المنتج قد يكون محذوفاً (soft delete) لكن بياناته
+                // يجب أن تبقى تظهر بشكل صحيح في سجل الطلبات للأدمن
+                'orderItem.product' => function ($q) {
+                    $q->withTrashed()->with('images');
+                },
             ])
                 ->orderBy('created_at', 'desc')
                 ->get();

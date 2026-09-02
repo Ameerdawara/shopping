@@ -187,7 +187,7 @@ public function destroy(Product $product)
 {
     $this->authorize('delete', $product);
 
-    // 🔴 منع الحذف إذا المنتج مرتبط بطلبات غير منتهية
+    // 🔴 منع الحذف إذا المنتج مرتبط بطلبات قيد الانتظار فعلياً (لا زالت قابلة للتعديل من العميل)
     $hasActiveOrders = $product->orderItems()
         ->whereHas('order', function ($q) {
             $q->where('status', 'pending');
@@ -200,18 +200,11 @@ public function destroy(Product $product)
         ], 409);
     }
 
-    DB::transaction(function () use ($product) {
-        $product->orderItems()
-            ->whereHas('order', fn ($q) =>
-                $q->whereIn('status', ['cancelled', 'processing'])
-            )
-            ->delete();
-        $product->delete();
-
-        if ($product->image && Storage::exists($product->image)) {
-            Storage::delete($product->image);
-        }
-    });
+    // ✅ Soft Delete فقط: المنتج يختفي من واجهة المتجر (index/show)
+    // لكن صفه يبقى في قاعدة البيانات، فتبقى بيانات المنتج (الاسم، الصورة، السعر)
+    // كما هي في سجل الطلبات القديمة دون أي تكرار أو نسخ إضافي للبيانات.
+    // لذلك لا نحذف عناصر الطلبات ولا نحذف صورة المنتج من التخزين هنا.
+    $product->delete();
 
     return response()->json([
         'message' => 'تم حذف المنتج بنجاح'

@@ -8,6 +8,7 @@ use App\Models\ExchangeRate;
 use App\Models\Offer;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class CartItemController extends Controller
 {
@@ -31,7 +32,11 @@ class CartItemController extends Controller
         $this->authorize('update', $cart);
 
         $data = $request->validate([
-            'product_id' => 'required|exists:products,id',
+            // نتأكد أن المنتج موجود وغير محذوف (soft delete) قبل السماح بإضافته للسلة
+            'product_id' => [
+                'required',
+                Rule::exists('products', 'id')->whereNull('deleted_at'),
+            ],
             'quantity'   => 'sometimes|integer|min:1',
             'color'      => 'nullable|string',
             'size'       => 'nullable|string'
