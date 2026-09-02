@@ -72,16 +72,18 @@ class Product extends Model
 
         return (float) $this->price;
     }
-    protected static function booted()
-    {
-        static::deleting(function ($product) {
-            // حذف الخصم
+   protected static function booted()
+{
+    static::deleting(function ($product) {
+        // نحذف العرض والصور فعلياً فقط عند الحذف النهائي (Force Delete)
+        // عند الـ Soft Delete (وهو ما يحصل عادةً من destroy()) نُبقي الصور والعرض
+        // كما هي، حتى تبقى بيانات المنتج كاملة (بما فيها الصورة) ظاهرة في سجل الطلبات القديمة.
+        if ($product->isForceDeleting()) {
             $product->offer()?->delete();
-
-            // حذف الصور
             $product->images()->delete();
-        });
-    }
+        }
+    });
+}
 
     public function activeOffer()
     {
