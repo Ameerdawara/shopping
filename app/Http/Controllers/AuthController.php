@@ -249,18 +249,38 @@ class AuthController extends Controller
 
     // ---------------------------------------------------------
     // LOGIN
+    // Accepts a single "login" field that can be either an email
+    // or a phone number (any format PhoneNumber::normalize() accepts).
     // ---------------------------------------------------------
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'email'    => 'required|email',
+            'login'    => 'required|string',
             'password' => 'required',
         ]);
 
-        $user = User::where('email', $credentials['email'])->first();
+        $loginInput = trim($credentials['login']);
+        $genericError = ['message' => 'البيانات غير صحيحة'];
+
+        // Decide whether the input is an email or a phone number,
+        // then look up the user on the matching column only.
+        if (filter_var($loginInput, FILTER_VALIDATE_EMAIL)) {
+            $user = User::where('email', $loginInput)->first();
+        } else {
+            $normalizedPhone = PhoneNumber::normalize($loginInput);
+
+            if (!$normalizedPhone) {
+                // Not a valid email and not a valid phone — same generic
+                // message as a wrong password, so we don't leak which
+                // field was the problem.
+                return response()->json($genericError, 401);
+            }
+
+            $user = User::where('phone', $normalizedPhone)->first();
+        }
 
         if (!$user || !Hash::check($credentials['password'], $user->password)) {
-            return response()->json(['message' => 'البيانات غير صحيحة'], 401);
+            return response()->json($genericError, 401);
         }
 
         if ($user->role !== 'admin' && !$user->phone_verified_at) {
