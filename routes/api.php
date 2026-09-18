@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdController;
 use App\Http\Controllers\AddImageController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CustomerController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProductController;
@@ -142,6 +143,10 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
 
     // Admin: جميع الطلبات للـ Commercial Ledger
     Route::get('/admin/orders', [OrderController::class, 'getOrdersToAdmin']);
+
+    // Admin: إدارة الزبائن — عرض القائمة مع عدد الطلبات، وحذف حساب زبون
+    Route::get('/admin/customers', [CustomerController::class, 'index']);
+    Route::delete('/admin/customers/{id}', [CustomerController::class, 'destroy']);
 });
 
 /*
