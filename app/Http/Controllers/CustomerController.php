@@ -16,9 +16,12 @@ class CustomerController extends Controller
     public function index(Request $request)
     {
         try {
+            // ملاحظة: تم حذف عمود address من هنا لأنه غير موجود فعلياً
+            // بجدول profiles على قاعدة البيانات — كان يسبب خطأ
+            // "Unknown column 'address'" (500) عند كل طلب لهذا الراوت
             $query = User::where('role', 'user')
                 ->withCount('orders')
-                ->with('profile:id,user_id,phone,address');
+                ->with('profile:id,user_id,phone');
 
             if ($request->filled('search')) {
                 $search = $request->search;
