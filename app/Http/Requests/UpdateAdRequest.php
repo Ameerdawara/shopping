@@ -23,7 +23,7 @@ class UpdateAdRequest extends FormRequest
     {
         return [
             'title'  => 'nullable|string|max:255',
-            'image'  => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'image'  => 'nullable|image|mimes:jpg,jpeg,png,webp|max:10240',
             'active' => 'boolean',
         ];
     }

@@ -6,6 +6,7 @@ use App\Models\Ad;
 use App\Http\Requests\StoreAdRequest;
 use App\Http\Requests\UpdateAdRequest;
 use Illuminate\Http\Request;
+use App\Services\ImageOptimizer;
 
 class AdController extends Controller
 {
@@ -30,7 +31,7 @@ class AdController extends Controller
         $data['description'] = $request->description;
 
         if ($request->hasFile('image')) {
-            $data['image'] = $request->file('image')->store('ads', 'public');
+            $data['image'] = ImageOptimizer::store($request->file('image'), 'ads', 1600, 80);
         }
 
         $ad = Ad::create($data);
@@ -46,7 +47,21 @@ class AdController extends Controller
     {
         $this->authorize('update', $ad);
 
-        $ad->update($request->validated());
+        $data = $request->validated();
+        unset($data['image']);
+
+        $oldImage = null;
+
+        if ($request->hasFile('image')) {
+            $oldImage = $ad->image;
+            $data['image'] = ImageOptimizer::store($request->file('image'), 'ads', 1600, 80);
+        }
+
+        $ad->update($data);
+
+        if ($oldImage) {
+            ImageOptimizer::delete($oldImage);
+        }
 
         return response()->json([
             'message' => 'تم تعديل الإعلان بنجاح',
@@ -59,7 +74,11 @@ class AdController extends Controller
     {
         $this->authorize('delete', $ad);
 
+        $oldImage = $ad->image;
+
         $ad->delete();
+
+        ImageOptimizer::delete($oldImage);
 
         return response()->json([
             'message' => 'تم حذف الإعلان بنجاح'

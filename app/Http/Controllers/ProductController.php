@@ -11,6 +11,7 @@ use Illuminate\Validation\Rule;
   use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use App\Services\ImageOptimizer;
 class ProductController extends Controller
 {
     /**
@@ -76,7 +77,7 @@ class ProductController extends Controller
 
             // الصور + اللون
             'images'               => 'required|array|min:1',
-            'images.*.file'        => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'images.*.file'        => 'required|image|mimes:jpg,jpeg,png,webp|max:10240',
             'images.*.color'       => 'required|string|max:50',
 
             // المقاسات
@@ -100,7 +101,7 @@ class ProductController extends Controller
 
         // حفظ الصور مع اللون
         foreach ($data['images'] as $img) {
-            $path = $img['file']->store('products', 'public');
+            $path = ImageOptimizer::store($img['file'], 'products', 1280, 80);
 
             $product->images()->create([
                 'image' => $path,
@@ -142,7 +143,7 @@ class ProductController extends Controller
 
             // الصور + اللون (اختياري)
             'images'               => 'sometimes|array|min:1',
-            'images.*.file'        => 'required|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'images.*.file'        => 'required|image|mimes:jpg,jpeg,png,webp|max:10240',
             'images.*.color'       => 'required|string|max:50',
 
             // المقاسات (اختياري)

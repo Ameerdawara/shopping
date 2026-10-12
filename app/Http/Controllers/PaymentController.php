@@ -6,6 +6,7 @@ use App\Models\Cart;
 use App\Models\ExchangeRate;
 use App\Models\Order;
 use App\Models\PaymentSetting;
+use App\Services\ImageOptimizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -50,8 +51,10 @@ class PaymentController extends Controller
         PaymentSetting::set('shamcash_wallet_label', $data['wallet_label'] ?? 'رقم المحفظة/الهاتف');
 
         if ($request->hasFile('qr_image')) {
-            $path = $request->file('qr_image')->store('qr', 'public');
+            $oldQr = PaymentSetting::get('shamcash_qr_url');
+            $path = ImageOptimizer::store($request->file('qr_image'), 'qr', 1000, 100, 'png');
             PaymentSetting::set('shamcash_qr_url', Storage::url($path));
+            ImageOptimizer::delete($oldQr, ['qr/shamcash.jpg', 'qr/usdt.jpg']);
         }
 
         return response()->json([
@@ -81,8 +84,10 @@ class PaymentController extends Controller
         PaymentSetting::set('usdt_network', $data['network'] ?? 'TRC20');
 
         if ($request->hasFile('qr_image')) {
-            $path = $request->file('qr_image')->store('qr', 'public');
+            $oldQr = PaymentSetting::get('usdt_qr_url');
+            $path = ImageOptimizer::store($request->file('qr_image'), 'qr', 1000, 100, 'png');
             PaymentSetting::set('usdt_qr_url', Storage::url($path));
+            ImageOptimizer::delete($oldQr, ['qr/shamcash.jpg', 'qr/usdt.jpg']);
         }
 
         return response()->json([
@@ -220,7 +225,7 @@ class PaymentController extends Controller
         $validator = Validator::make($request->all(), [
             'sender_name'     => 'required|string|max:255',
             'transaction_id'  => 'required|string|max:255',
-            'proof_image'     => 'nullable|image|max:4096', // اختياري: صورة إيصال
+            'proof_image'     => 'nullable|image|max:10240', // اختياري: صورة إيصال
         ]);
 
         if ($validator->fails()) {
@@ -253,7 +258,7 @@ class PaymentController extends Controller
 
         // حفظ صورة الإيصال إن وجدت
         if ($request->hasFile('proof_image')) {
-            $path = $request->file('proof_image')->store('payment_proofs', 'public');
+            $path = ImageOptimizer::store($request->file('proof_image'), 'payment_proofs', 1600, 85);
             $proofData['proof_image_url'] = Storage::url($path);
         }
 
