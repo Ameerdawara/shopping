@@ -1,59 +1,200 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+<div align="center">
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+# 🛍️ تسوق معنا — الخادم (Shopping API)
+
+**واجهة برمجية لمتجر إلكتروني: منتجات، سلة، طلبات، دفع يدوي (شام كاش / USDT)، عروض، إعلانات، وتحقق بالـ OTP.**
+
+<p>
+  <img src="https://img.shields.io/badge/Laravel-12-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel" />
+  <img src="https://img.shields.io/badge/PHP-%E2%89%A58.2-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP" />
+  <img src="https://img.shields.io/badge/Auth-Sanctum-FF2D20?style=for-the-badge" alt="Sanctum" />
+  <img src="https://img.shields.io/badge/Images-WebP%20Optimizer-0ea5e9?style=for-the-badge" alt="WebP" />
+  <img src="https://img.shields.io/badge/Currency-USD%20%7C%20SYP-16a34a?style=for-the-badge" alt="Currency" />
 </p>
 
-## About Laravel
+[المزايا](#-المزايا) • [المعمارية](#-المعمارية) • [مسار الدفع](#-مسار-الدفع-اليدوي) • [API](#-أهم-المسارات) • [التثبيت](#-التثبيت) • [البيئة](#-متغيرات-البيئة)
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+</div>
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+---
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+<div dir="rtl">
 
-## Learning Laravel
+## 📖 نبذة
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+هذا المستودع هو **الـ API** لمتجر «تسوق معنا». يخدم واجهة الويب [shopping-frontend](https://github.com/Kaisalafef/shopping-frontend)، ويدير الكتالوج والطلبات والدفع، ويدعم **عملتين (USD و SYP)** مع سعر صرف يحدّده المشرف، وتفعيل الحساب برمز **OTP** عبر رسالة نصية للأرقام السورية.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## 🧩 منظومة المشروع
 
-## Laravel Sponsors
+| المستودع | الوصف |
+|---|---|
+| 🛠️ **shopping** (هذا المستودع) | الـ API — Laravel |
+| 🖥️ [shopping-frontend](https://github.com/Kaisalafef/shopping-frontend) | واجهة المتجر ولوحة المشرف — HTML/CSS/JS |
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## ✨ المزايا
 
-### Premium Partners
+| المجال | التفاصيل |
+|---|---|
+| 📦 **الكتالوج** | منتجات بصور متعددة ومقاسات وماركات وتصنيفات (مع أيقونة)، وحذف ناعم `SoftDeletes` |
+| 💱 **العملات** | سعر المنتج بـ `USD` أو `SYP`، سعر صرف قابل للتعديل مع **سجل تغييرات**، ويُحفظ سعر الصرف داخل الطلب وعناصر السلة وقت الشراء |
+| 🛒 **السلة والطلبات** | سلة لكل مستخدم، طلب بالدفع عند الاستلام، تتبع الحالة، وتقرير مبيعات شهري |
+| 💳 **الدفع اليدوي** | شام كاش و USDT مع رفع إثبات الدفع واعتماد/رفض من المشرف |
+| 🏷️ **العروض والإعلانات** | خصومات على المنتجات، وإعلانات تظهر في الصفحة الرئيسية |
+| ⭐ **التقييمات** | تقييم المنتجات من الزبائن المسجّلين |
+| 🔔 **الإشعارات** | إشعارات داخلية مع عدّاد غير المقروء |
+| 🔐 **التحقق بـ OTP** | رمز من 6 خانات صالح 10 دقائق، إرسال عبر **Rasel SMS**، وإعادة إرسال. يمكن تعطيله بـ `OTP_ENABLED=false` |
+| 📱 **أرقام الهواتف** | توحيد أي صيغة إدخال (`09…` / `9…` / `+9639…` / `009639…`) إلى `+9639XXXXXXXX` |
+| 🖼️ **تحسين الصور** | ضغط تلقائي عند الرفع إلى **WebP** (PNG لصور QR)، تصحيح الاتجاه، وحذف بيانات EXIF/GPS، مع الرجوع للأصل عند أي فشل |
+| 👤 **الأدوار** | `admin` و`user` عبر `AdminMiddleware` + Policies للمنتجات والعروض والإعلانات والتقييمات والسلة والإشعارات |
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## 🏗️ المعمارية
 
-## Contributing
+```mermaid
+flowchart LR
+    U[🖥️ shopping-frontend<br/>زبون] -->|REST + Bearer| API
+    A[🧑‍💼 لوحة المشرف] -->|REST + Bearer| API
+    subgraph API[Laravel 12]
+        direction TB
+        S[Sanctum] --> M[AdminMiddleware<br/>+ Policies]
+        M --> C[Controllers]
+        C --> I[ImageOptimizer]
+        C --> P[SmsService]
+    end
+    API --> DB[(MySQL)]
+    API --> ST[(storage/public<br/>صور • QR • إثباتات)]
+    P -->|OTP| R[Rasel SMS API]
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## 💳 مسار الدفع اليدوي
 
-## Code of Conduct
+```mermaid
+sequenceDiagram
+    participant C as الزبون
+    participant API as الـ API
+    participant A as المشرف
+    C->>API: GET /payment-settings + /qr-images
+    C->>API: POST /orders/manual
+    C->>API: POST /orders/{id}/payment-proof (اسم المرسل + رقم العملية + صورة)
+    Note over API: الحالة ← pending_approval
+    A->>API: GET /admin/orders/pending-approval
+    alt اعتماد
+        A->>API: PUT /admin/orders/{id}/approve
+    else رفض
+        A->>API: PUT /admin/orders/{id}/reject
+    end
+    C->>API: GET /orders/{id}/status
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## 🔌 أهم المسارات
 
-## Security Vulnerabilities
+> كل المسارات تحت البادئة `/api`. المحمية تتطلب `Authorization: Bearer <token>`.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+**عامة**
 
-## License
+| الطريقة | المسار | الوصف |
+|---|---|---|
+| `POST` | `/register` • `/login` | إنشاء حساب / دخول |
+| `POST` | `/verify-otp` • `/resend-otp` | تفعيل الحساب |
+| `GET` | `/products` • `/products/{id}` • `/products/category/{category}` | المنتجات |
+| `GET` | `/categories` • `/offers` • `/ads` | تصنيفات وعروض وإعلانات |
+| `GET` | `/reviews/product/{id}` | تقييمات منتج |
+| `GET` | `/exchange-rate` • `/payment-settings` • `/qr-images` | سعر الصرف وإعدادات الدفع |
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+**مستخدم مسجّل**
+
+| الطريقة | المسار | الوصف |
+|---|---|---|
+| `GET` `DELETE` | `/cart` • `/cart/total` • `/cart/clear` | السلة |
+| `POST` `PUT` `DELETE` | `/carts/{cart}/items[/{item}]` | عناصر السلة |
+| `POST` | `/orders` | طلب بالدفع عند الاستلام |
+| `GET` | `/orders/user` • `/order-items/order/{id}` | طلباتي |
+| `POST` `GET` | `/orders/manual` • `/orders/{id}/payment-proof` • `/orders/{id}/status` | الدفع اليدوي |
+| `POST` `PUT` `DELETE` | `/reviews` | التقييمات |
+| `GET` `PUT` | `/profile` | الحساب |
+| `GET` `PUT` | `/notifications` • `/notifications/unread-count` • `/notifications/mark-all-read` | الإشعارات |
+
+**مشرف (`admin`)**
+
+| الطريقة | المسار | الوصف |
+|---|---|---|
+| `POST` `PUT` `DELETE` | `/products` • `/categories` • `/offers` • `/ads` | إدارة المحتوى |
+| `GET` | `/orders/status/{status}` • `/orders/reports/monthly/{month}/{year}` • `/admin/orders` | الطلبات والتقارير |
+| `POST` `GET` | `/exchange-rate` • `/exchange-rate/history` | سعر الصرف |
+| `POST` | `/admin/payment-settings/shamcash` • `/admin/payment-settings/usdt` • `/upload-qr` | إعدادات الدفع |
+| `GET` `PUT` | `/admin/orders/pending-approval` • `/approve` • `/reject` | اعتماد الدفعات |
+| `GET` `DELETE` | `/admin/customers` | إدارة الزبائن |
+
+## ⚙️ التثبيت
+
+**المتطلبات:** PHP ≥ 8.2 (مع امتداد GD) • Composer • Node.js ≥ 18 • MySQL/MariaDB.
+
+```bash
+# 1) استنسخ المشروع
+git clone https://github.com/Ameerdawara/shopping.git
+cd shopping
+
+# 2) الاعتماديات
+composer install
+npm install
+
+# 3) البيئة
+cp .env.example .env     # إن لم يوجد الملف أنشئ .env من القائمة أدناه
+php artisan key:generate
+
+# 4) قاعدة البيانات
+php artisan migrate --seed
+php artisan storage:link   # لعرض الصور وصور QR
+
+# 5) التشغيل
+php artisan serve
+```
+
+> 🔑 يُنشئ `AdminUserSeeder` حساب مشرف أولي. **غيّر بريده وكلمة مروره فوراً** قبل أي نشر.
+
+## 🔐 متغيرات البيئة
+
+| المجموعة | المتغيرات |
+|---|---|
+| التطبيق | `APP_NAME` `APP_ENV` `APP_KEY` `APP_DEBUG` `APP_URL` |
+| قاعدة البيانات | `DB_CONNECTION` `DB_HOST` `DB_PORT` `DB_DATABASE` `DB_USERNAME` `DB_PASSWORD` |
+| OTP / SMS | `OTP_ENABLED` `RASEL_API_URL` `RASEL_API_KEY` |
+| Sanctum / CORS | `SANCTUM_STATEFUL_DOMAINS` (وأضف نطاق الواجهة في `config/cors.php`) |
+| الملفات | `FILESYSTEM_DISK` |
+| البريد | `MAIL_MAILER` `MAIL_HOST` `MAIL_PORT` `MAIL_USERNAME` `MAIL_PASSWORD` `MAIL_FROM_ADDRESS` |
+
+> ⚠️ لا ترفع `.env` إلى المستودع.
+
+## 🗂️ بنية المشروع
+
+```
+app/
+├── Http/
+│   ├── Controllers/   # Product, Category, Order, Payment, Cart(Card), Offer, Ad, Review, ...
+│   ├── Middleware/    # AdminMiddleware
+│   ├── Requests/      # Store/Update Form Requests
+│   └── Resources/     # ProductResource
+├── Models/            # Product, ProductImage, ProductSize, Order, OrderItem, Payment, ExchangeRate, ...
+├── Policies/          # Offer, Review, Product, Cart, Notification, Ad
+├── Services/          # SmsService (Rasel) • ImageOptimizer (GD → WebP)
+└── Support/           # PhoneNumber (E.164 سوري)
+database/
+├── migrations/        # المنتجات، الطلبات، الدفع، أسعار الصرف، OTP، ...
+└── seeders/           # AdminUserSeeder
+routes/api.php         # كل مسارات الـ API
+```
+
+## 👥 الفريق
+
+| الاسم | الدور |
+|---|---|
+| غيث رؤوف كحل | مهندس برمجيات |
+| قيس أيمن العفيف | مهندس برمجيات |
+| أمير سلام دواره | مهندس برمجيات |
+| حلا سامر هلال | مهندسة برمجيات |
+| دلع وائل عدوان | مهندسة برمجيات |
+
+## 📄 الترخيص
+
+مشروع خاص. جميع الحقوق محفوظة © 2026.
+
+</div>
