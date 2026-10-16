@@ -14,10 +14,10 @@ class AdminUserSeeder extends Seeder
     public function run(): void
     {
         User::updateOrCreate(
-            ['email' => 'admin@tasswek.com'], // البريد الإلكتروني للـ Admin
+            ['email' => '6'], // البريد الإلكتروني للـ Admin
             [
                 'name' => 'Admin User',
-                'password' => Hash::make('123456789'), // كلمة المرور الخاصة بك
+                'password' => Hash::make('9'), // كلمة المرور الخاصة بك
                 'role' => 'admin', // تعيين الـ role ليكون admin
             ]
         );
