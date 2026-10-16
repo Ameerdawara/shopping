@@ -154,7 +154,4 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
 | Utility Routes
 |--------------------------------------------------------------------------
 */
-Route::get('/run-link', function () {
-    \Illuminate\Support\Facades\Artisan::call('storage:link');
-    return 'Storage link created successfully!';
-});
+
